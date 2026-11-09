@@ -1,0 +1,12 @@
+name: Docs
+on:
+  push:
+    paths: ["docs/**"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: make docs
+        env:
+          TOKEN: ${{ secrets.DOCS_UPLOAD_TOKEN }}

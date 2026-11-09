@@ -1,0 +1,61 @@
+# On PRs it validates the register. Each day it opens one issue per secret that
+# is due soon, and another when that secret goes overdue. An issue holds the
+# secret's register id, owner and day count, never a value. Close the issues
+# after rotating.
+name: Register check
+
+on:
+  pull_request:
+    paths:
+      - "inventory/**"
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Remove --allow-incomplete once the register has no TBD values.
+      - run: python3 inventory/validate.py register --allow-incomplete
+
+  rotation-alert:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open an issue for each secret that needs rotating
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          status=0
+          python3 inventory/validate.py register --allow-incomplete --format alerts > alerts.tsv || status=$?
+          if [ "$status" -ge 2 ]; then
+            echo "The register could not be read."
+            exit "$status"
+          fi
+          existing=$(gh issue list --state open --limit 500 --json title --jq '.[].title')
+          while IFS=$'\t' read -r state id owner message; do
+            title="Agent secret rotation ${state}: ${id}"
+            if grep -Fxq "$title" <<< "$existing"; then
+              continue
+            fi
+            printf 'Owner: %s\n\nSecret %s: %s.\n\nRotate it: add the new key, deploy it, delete the old one, then update the register. See inventory/README.md.\n' \
+              "$owner" "$id" "$message" > body.md
+            gh issue create --title "$title" --body-file body.md < /dev/null
+          done < alerts.tsv
+          exit "$status"

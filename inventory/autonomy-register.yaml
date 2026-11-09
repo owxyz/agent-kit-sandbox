@@ -1,0 +1,219 @@
+# Autonomy register (ticket P0.13). Changes need code-owner approval; see README.md.
+# Validate with: python3 inventory/validate.py register
+#
+# TBD means "not known yet". The validator reports every TBD as incomplete.
+# This file holds names and locations only. Never put a secret value here.
+schema_version: 1
+
+policy:
+  rotation_days: 90        # proposed in P0.13; GitHub App keys never expire
+  alert_days_before: 14    # proposed here; the plan only says "before it comes due"
+  due_soon_days: 14
+
+agents:
+  - id: diagnosis
+    job: Explain the likely root cause and failure type of every failed CI run
+    plan_ref: P1.7
+    level: Advise
+    token_scope:
+      identity: Own GitHub App, run from the app service outside PR workflows
+      permissions: {contents: read, checks: write}
+      notes: Read access plus checks only, so it cannot approve PRs.
+    promotion_metric:
+      name: Diagnosis "not helpful" rate
+      target: Under 10%
+      notes: The plan says this check is never required, so a passing metric does not make it a required check.
+
+  - id: review
+    job: AI review of agent and human PRs before human review
+    plan_ref: P4.2
+    level: Advise
+    token_scope:
+      identity: Own GitHub App, run from the app service outside PR workflows
+      permissions: {contents: read, checks: write}
+      notes: Findings are check-run annotations; if ever required, it adds to owner approval and never replaces it (P4.1).
+    promotion_metric:
+      name: Review comments rated useful
+      target: At least 60%
+
+  - id: llm-judge
+    job: Advisory reward-hacking review of diffs
+    plan_ref: P2.5
+    level: Advise
+    token_scope:
+      identity: Own GitHub App, run from the app service outside PR workflows
+      permissions: {contents: read, checks: write}
+    promotion_metric:
+      name: TBD
+      target: TBD
+      notes: The plan's pipeline-agent metrics table defines no metric for the judge.
+
+  - id: narrow-repair
+    job: Bounded fix loop for allowlisted failure types
+    plan_ref: P3.2
+    level: Act with gates
+    token_scope:
+      identity: Own GitHub App (P0.2)
+      permissions: {contents: write, pull_requests: write}
+      notes: Contents write is limited to agent branches by rulesets.
+    promotion_metric:
+      name: Fix rate for each failure type
+      target: "Proposed, code owners to confirm: add a failure type at a fix rate near the 45% reference, with no test-weakening fixes over 2 weeks"
+      notes: The plan reports this by failure type with no overall target. This agent is already at the top level, so promotion means adding a failure type.
+
+  - id: broad-repair
+    job: Suggested patch in the handoff for failures outside the allowlist
+    plan_ref: P3.3
+    level: Suggest
+    token_scope:
+      identity: Own GitHub App (P0.2)
+      permissions: {contents: read, pull_requests: write}
+      notes: Derived from P3.3, which posts a diff in a PR comment. Must not share the narrow-repair app, which has contents write. Code owners should confirm.
+    promotion_metric:
+      name: Suggested patches applied, and share later reverted
+      target: "None yet: no promotion until a baseline exists"
+      notes: The plan tracks this only until a baseline exists. Handoff quality (target at least 80%) is a related guardrail.
+
+  - id: dependency-repair
+    job: Repair patch for dependency bumps that broke compile or tests
+    plan_ref: P3.4
+    level: Suggest
+    token_scope:
+      identity: Own GitHub App (P0.2)
+      permissions: {contents: write, pull_requests: read}
+      notes: Derived from P3.4, which proposes a patch on a separate branch. Limit writes to agent branches by rulesets. P3.4 does not say how a person learns of the patch; if the agent must comment on the PR, pull_requests needs write. Code owners should confirm.
+    promotion_metric:
+      name: Suggested patches applied, and share later reverted
+      target: "None yet: no promotion until a baseline exists"
+      notes: The plan tracks this only until a baseline exists.
+
+# Secret holders that are not CI-step agents.
+other_secret_holders:
+  - id: coding-agent-tbd
+    type: coding-agent
+    description: Placeholder. Replace with one entry per coding agent once P0.2 names them, each with its own secrets below.
+  - id: app-service
+    type: app-service
+    description: The GitHub App service that runs the advisory agents and receives GitHub event notifications.
+
+secrets:
+  - id: diagnosis-app-key
+    holder: diagnosis
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: diagnosis-model-key
+    holder: diagnosis
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: review-app-key
+    holder: review
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: review-model-key
+    holder: review
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: llm-judge-app-key
+    holder: llm-judge
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: llm-judge-model-key
+    holder: llm-judge
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: narrow-repair-app-key
+    holder: narrow-repair
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: narrow-repair-model-key
+    holder: narrow-repair
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: broad-repair-app-key
+    holder: broad-repair
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: broad-repair-model-key
+    holder: broad-repair
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: dependency-repair-app-key
+    holder: dependency-repair
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: dependency-repair-model-key
+    holder: dependency-repair
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: coding-agent-tbd-app-key
+    holder: coding-agent-tbd
+    kind: github-app-private-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: coding-agent-tbd-model-key
+    holder: coding-agent-tbd
+    kind: model-api-key
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
+  - id: app-service-webhook-secret
+    holder: app-service
+    kind: webhook-secret
+    owner: TBD
+    secrets_manager_location: TBD
+    last_rotated: TBD
+    rotation_date: TBD
+    alert_date: TBD
