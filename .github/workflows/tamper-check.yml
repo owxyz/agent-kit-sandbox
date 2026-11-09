@@ -1,0 +1,109 @@
+# Required check `tamper-check` (ticket P2.2).
+#
+# Runs base-branch rules over the PR diff as data. The job has no secrets and a
+# read-only token, and nothing from the PR is executed. Install this file at
+# .github/workflows/ and the gate at .github/gates/tamper/.
+#
+# Like kit/workflows/agent-kit-checks.yml, this uses `pull_request`, so GitHub
+# reads this YAML from the PR's merge commit. A PR could edit it, which is why
+# P2.1 (owner approval on workflows) and P2.9 must close before any rule blocks.
+name: tamper-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  tamper-check:
+    name: tamper-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out base-branch rules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Fetch changes as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find the commits to compare
+        id: range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          QUEUE_HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            base="$QUEUE_BASE"
+            head="$QUEUE_HEAD"
+          else
+            # The checkout is the PR's merge commit, and its first parent is
+            # the target branch, so the diff is what this PR would change.
+            base="$(git -C pr rev-parse HEAD^1)"
+            head="$(git -C pr rev-parse HEAD)"
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+
+      - name: Classify the PR from live labels
+        id: class
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -uo pipefail
+          # Any lookup failure leaves the fail-closed class, `agent`.
+          class=agent
+          number="$PR_NUMBER"
+          if [ -z "$number" ]; then
+            number="$(printf '%s' "$QUEUE_REF" | sed -nE 's#^refs/heads/gh-readonly-queue/.+/pr-([0-9]+)-[0-9a-f]+$#\1#p')"
+          fi
+          if [[ "$number" =~ ^[0-9]+$ ]] && labels="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$number" --jq '.labels[].name')"; then
+            if ! printf '%s\n' "$labels" | grep -q '^agent:'; then
+              class=human
+            fi
+          fi
+          echo "class=$class" >> "$GITHUB_OUTPUT"
+
+      - name: Install rule dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -r .trusted/.github/gates/tamper/requirements.txt
+
+      - name: Run tamper rules over the diff
+        env:
+          BASE_SHA: ${{ steps.range.outputs.base }}
+          HEAD_SHA: ${{ steps.range.outputs.head }}
+          PR_CLASS: ${{ steps.class.outputs.class }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/gates/tamper/tamper_check.py
+          --config .trusted/.github/gates/tamper/rules.yml
+          --repo pr --base "$BASE_SHA" --head "$HEAD_SHA"
+          --pr-class "$PR_CLASS"
+          --output "$RUNNER_TEMP/tamper-findings.json"
+          --summary "$GITHUB_STEP_SUMMARY"
+          --annotate
+
+      - name: Upload findings for the verdict ledger
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tamper-findings
+          path: ${{ runner.temp }}/tamper-findings.json
+          if-no-files-found: error
+          retention-days: 30
