@@ -1,0 +1,21 @@
+name: test-concurrency
+on:
+  push:
+    branches: [test-refusals]
+permissions: {}
+jobs:
+  group:
+    runs-on: ubuntu-latest
+    outputs:
+      concurrency-group: ${{ steps.g.outputs.group }}
+    steps:
+      - id: g
+        run: echo "group=agent-test-${{ github.repository }}" >> "$GITHUB_OUTPUT"
+  hold:
+    needs: group
+    concurrency:
+      group: ${{ needs.group.outputs.concurrency-group }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 75

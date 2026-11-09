@@ -1,0 +1,11 @@
+name: test-pr-preflight
+on:
+  pull_request:
+    types: [opened]
+permissions: {}
+jobs:
+  preflight:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/agent-preflight.yml
