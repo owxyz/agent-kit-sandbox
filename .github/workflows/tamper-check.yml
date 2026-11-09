@@ -1,6 +1,6 @@
 # Required check `tamper-check` (tickets P2.2, P2.7).
 #
-# Uses pull_request_target on purpose: this YAML and the rules come from the
+# Uses pull_request on purpose: this YAML and the rules come from the
 # base branch, so a PR cannot edit its own check or reach the audit secrets. The
 # PR is never checked out. Its files arrive through the API as data, and nothing
 # from it runs. Install this file at .github/workflows/ and the gate at
@@ -16,7 +16,7 @@
 name: tamper-check
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   merge_group:
 
@@ -103,7 +103,7 @@ jobs:
         run: exit 2
 
       - name: Apply any owner override
-        if: steps.gate.outputs.exit == '1' && github.event_name == 'pull_request_target'
+        if: steps.gate.outputs.exit == '1' && github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
