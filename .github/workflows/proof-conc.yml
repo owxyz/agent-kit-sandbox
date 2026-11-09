@@ -1,0 +1,15 @@
+name: proof-conc
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled]
+permissions: {}
+concurrency:
+  group: proof-conc-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  conc:
+    name: proof-conc
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: sleep 45
