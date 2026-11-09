@@ -30,7 +30,7 @@ promotion:
 
 rules:
   # Test and fixture edits
-  test-skipped:                {mode: warn, intended: block, category: test-and-fixture-edits}
+  test-skipped:                {mode: block, intended: block, category: test-and-fixture-edits}
   test-deleted:                {mode: warn, intended: block, category: test-and-fixture-edits}
   test-count-drop:             {mode: warn, intended: block, category: test-and-fixture-edits}
   assertion-weakened:          {mode: warn, intended: block, category: test-and-fixture-edits}
