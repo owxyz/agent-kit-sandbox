@@ -1,0 +1,23 @@
+name: proof-conclusions
+on:
+  pull_request:
+permissions: {}
+jobs:
+  skipped:
+    name: proof-skipped
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo never
+  neutral:
+    name: proof-neutral-poster
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      checks: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=proof-neutral -f head_sha="$HEAD_SHA" -f status=completed -f conclusion=neutral
