@@ -1,0 +1,52 @@
+# Required check `workflow-lint` (tickets P0.4, P0.7).
+#
+# Runs base-branch linters over the PR's files as data. The job has no secrets
+# and read-only permissions, and nothing from the PR is executed.
+name: agent-kit-checks
+
+on:
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+jobs:
+  workflow-lint:
+    name: workflow-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out base-branch linters
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Check out changes as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pr
+          persist-credentials: false
+
+      - name: Install linter dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -r .trusted/.github/agent-kit/requirements.txt
+
+      - name: Lint workflows for unsafe PR handling
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/scripts/lint_agent_workflows.py
+          pr/.github/workflows
+
+      - name: Check action and agent version pins
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/scripts/check_action_pins.py
+          pr/.github
+
+      - name: Check MCP servers against the approved list
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/scripts/check_mcp_allowlist.py
+          --allowlist .trusted/.github/agent-kit/approved-mcp-servers.json --root pr

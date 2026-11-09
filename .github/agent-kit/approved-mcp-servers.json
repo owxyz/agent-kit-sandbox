@@ -1,0 +1,4 @@
+{
+  "_comment": "Empty denies every MCP server. Add a server only after review. stdio entries: {name, type: stdio, package, version (exact), approved_by, review}. http entries: {name, type: http, url (https), approved_by, review}.",
+  "servers": []
+}

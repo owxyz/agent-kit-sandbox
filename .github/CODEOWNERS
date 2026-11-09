@@ -1,0 +1,82 @@
+# Install as .github/CODEOWNERS and replace REPLACE_ORG and the team names.
+# The last matching pattern wins, so the catch-all must stay first.
+# Owners must be human teams with write access; never add an agent or its App.
+
+# Catch-all. With the ruleset's code-owner review, every PR needs a human
+# owner's approval, so an agent App's approval can never satisfy it (P0.3, P0.9).
+*                               @Yimunan
+
+# Tests, fixtures and snapshots
+tests/                          @Yimunan
+test/                           @Yimunan
+**/tests/                       @Yimunan
+**/__tests__/                   @Yimunan
+**/fixtures/                    @Yimunan
+**/__fixtures__/                @Yimunan
+**/__snapshots__/               @Yimunan
+**/snapshots/                   @Yimunan
+*.snap                          @Yimunan
+
+# Test harness files and runner config
+**/conftest.py                  @Yimunan
+**/pytest.ini                   @Yimunan
+**/tox.ini                      @Yimunan
+**/noxfile.py                   @Yimunan
+**/jest.config.*                @Yimunan
+**/jest.setup.*                 @Yimunan
+**/vitest.config.*              @Yimunan
+**/vitest.setup.*               @Yimunan
+**/playwright.config.*          @Yimunan
+**/karma.conf.*                 @Yimunan
+**/.mocharc*                    @Yimunan
+
+# CI and repository controls
+.github/workflows/              @Yimunan
+.github/actions/                @Yimunan
+.github/agent-kit/              @Yimunan
+.github/agent-tools/            @Yimunan
+.github/dependabot.yml          @Yimunan
+.github/CODEOWNERS              @Yimunan
+
+# Agent context files at any depth, so new nested files are covered
+**/AGENTS.md                    @Yimunan
+**/AGENTS.override.md           @Yimunan
+**/AGENT.md                     @Yimunan
+**/CLAUDE.md                    @Yimunan
+**/CLAUDE.local.md              @Yimunan
+**/GEMINI.md                    @Yimunan
+**/.cursorrules                 @Yimunan
+.github/copilot-instructions.md @Yimunan
+.github/instructions/           @Yimunan
+.github/prompts/                @Yimunan
+.github/agents/                 @Yimunan
+
+# Agent tool and MCP config
+**/.mcp.json                    @Yimunan
+**/.claude/                     @Yimunan
+**/.cursor/                     @Yimunan
+**/.codex/                      @Yimunan
+**/.gemini/                     @Yimunan
+**/.vscode/mcp.json             @Yimunan
+
+# Lint, type and coverage config
+**/.eslintrc*                   @Yimunan
+**/eslint.config.*              @Yimunan
+**/.prettierrc*                 @Yimunan
+**/ruff.toml                    @Yimunan
+**/.ruff.toml                   @Yimunan
+**/.flake8                      @Yimunan
+**/.pylintrc                    @Yimunan
+**/mypy.ini                     @Yimunan
+**/.mypy.ini                    @Yimunan
+**/pyrightconfig.json           @Yimunan
+**/tsconfig*.json               @Yimunan
+**/.coveragerc                  @Yimunan
+**/.nycrc*                      @Yimunan
+**/codecov.yml                  @Yimunan
+**/.codecov.yml                 @Yimunan
+
+# These hold test, lint and coverage settings alongside other project metadata
+**/pyproject.toml               @Yimunan
+**/setup.cfg                    @Yimunan
+**/package.json                 @Yimunan

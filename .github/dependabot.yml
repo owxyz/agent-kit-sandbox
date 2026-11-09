@@ -1,0 +1,29 @@
+# Install as .github/dependabot.yml (P0.7). Dependabot updates the commit SHA
+# and the version comment on pinned actions.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+
+  # Exact-version agent CLIs, plugins and MCP servers. Keep them in this
+  # manifest, because Dependabot cannot update versions inside `run:` steps.
+  - package-ecosystem: npm
+    directory: /.github/agent-tools
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+
+  - package-ecosystem: pip
+    directory: /.github/agent-kit
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies

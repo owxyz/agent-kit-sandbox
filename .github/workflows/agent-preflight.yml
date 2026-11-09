@@ -1,0 +1,255 @@
+# Reusable agent pre-flight (tickets P0.5, P0.9, P0.10).
+#
+# Install as .github/workflows/agent-preflight.yml and call it first from every
+# agent workflow; see agent-run.example.yml.
+#
+# Checks run in this order, and the first refusal ends the run:
+#   1. kill_switch      org variable AGENT_KILL_SWITCH must be exactly "off"
+#   2. write_access     author_association, then a live write-permission lookup
+#   3. bot_trigger      a bot-set label or assignment never starts an agent
+#   4. fork_pr          fork PRs are refused, including via issue comments
+#   5. containment      pilot-repo allowlist, manual trigger only, default branch
+#   6. concurrency      publishes the one-agent-per-repo group as an output
+#
+# A refusal fails this job, so a caller's `needs: preflight` job is skipped even
+# if the caller forgets its `if:`. Containment settings are org variables rather
+# than inputs, so editing a calling workflow cannot widen them. Everything fails
+# closed: an unset variable or failed API call is a refusal.
+#
+# This workflow checks out nothing and uses no third-party actions.
+name: agent-preflight
+
+on:
+  workflow_call:
+    inputs:
+      target-pr:
+        description: PR number the agent will act on, if the trigger does not carry one.
+        type: string
+        required: false
+        default: ""
+    outputs:
+      allowed:
+        description: '"true" only when every check passed.'
+        value: ${{ jobs.gate.outputs.allowed }}
+      concurrency-group:
+        description: Group name the calling agent job must use.
+        value: ${{ jobs.gate.outputs.concurrency-group }}
+
+permissions: {}
+
+jobs:
+  gate:
+    name: agent pre-flight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      allowed: ${{ steps.decision.outputs.allowed }}
+      concurrency-group: ${{ steps.decision.outputs.concurrency_group }}
+    steps:
+      - name: Evaluate pre-flight rules
+        id: decision
+        shell: python3 {0}
+        env:
+          AGENT_KILL_SWITCH: ${{ vars.AGENT_KILL_SWITCH }}
+          AGENT_PILOT_REPOS: ${{ vars.AGENT_PILOT_REPOS }}
+          AGENT_MANUAL_ONLY: ${{ vars.AGENT_MANUAL_ONLY }}
+          AGENT_BOT_LOGINS: ${{ vars.AGENT_BOT_LOGINS }}
+          TARGET_PR: ${{ inputs.target-pr }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          import datetime, json, os, re, sys, urllib.parse, urllib.request
+
+          ENV = os.environ
+          WRITE_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
+          WRITE_PERMISSIONS = {"admin", "write"}
+          LABEL_ACTIONS = {"labeled", "unlabeled", "assigned", "unassigned"}
+          # Where each event carries author_association. An event missing from
+          # this map is refused, which includes pull_request_target.
+          ASSOCIATION_SOURCE = {
+              "issue_comment": "comment",
+              "issues": "issue",
+              "pull_request": "pull_request",
+              "pull_request_review": "review",
+              "pull_request_review_comment": "comment",
+          }
+          PR_PAYLOAD_EVENTS = {
+              "pull_request", "pull_request_review", "pull_request_review_comment",
+          }
+
+
+          class Refused(Exception):
+              def __init__(self, rule, reason):
+                  super().__init__(reason)
+                  self.rule = rule
+                  self.reason = reason
+
+
+          def safe(value, limit=120):
+              """Strip anything that could forge a workflow command or log line."""
+              return re.sub(r"[^A-Za-z0-9_.\-\[\]/@ ]", "?", str(value))[:limit]
+
+
+          def api(path):
+              base = ENV.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+              request = urllib.request.Request(base + path, headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": "Bearer " + ENV.get("GITHUB_TOKEN", ""),
+                  "X-GitHub-Api-Version": "2022-11-28",
+              })
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  return json.load(response)
+
+
+          def csv_set(value):
+              return {p.strip().lower() for p in (value or "").split(",") if p.strip()}
+
+
+          def is_bot(login, account_type=""):
+              lowered = (login or "").lower()
+              return (account_type == "Bot" or lowered.endswith("[bot]")
+                      or lowered in csv_set(ENV.get("AGENT_BOT_LOGINS")))
+
+
+          def check_kill_switch():
+              if ENV.get("AGENT_KILL_SWITCH", "").strip().lower() != "off":
+                  raise Refused("kill_switch",
+                                'AGENT_KILL_SWITCH is not "off"; agents are stopped')
+
+
+          def check_write_access(event_name, event, action, repo, actor, bot):
+              if bot and action in LABEL_ACTIONS:
+                  return  # Refused by the more specific bot_trigger rule next.
+              if bot:
+                  raise Refused("write_access", "bot actors cannot start an agent")
+              if event_name != "workflow_dispatch" and action not in LABEL_ACTIONS:
+                  source = ASSOCIATION_SOURCE.get(event_name)
+                  if source is None:
+                      raise Refused("write_access", "event has no trusted author: " + event_name)
+                  association = (event.get(source) or {}).get("author_association")
+                  if association not in WRITE_ASSOCIATIONS:
+                      raise Refused("write_access", "author_association not allowed: %s" % association)
+              elif event_name not in ASSOCIATION_SOURCE and event_name != "workflow_dispatch":
+                  raise Refused("write_access", "event has no trusted author: " + event_name)
+              # author_association alone is not enough: MEMBER and COLLABORATOR
+              # can both be read-only, so confirm the actual permission.
+              path = "/repos/%s/collaborators/%s/permission" % (repo, urllib.parse.quote(actor))
+              try:
+                  permission = api(path).get("permission")
+              except Exception as error:
+                  raise Refused("write_access", "permission lookup failed: " + type(error).__name__)
+              if permission not in WRITE_PERMISSIONS:
+                  raise Refused("write_access", "actor lacks write permission: %s" % permission)
+
+
+          def check_bot_trigger(action, actor, bot):
+              if bot and action in LABEL_ACTIONS:
+                  raise Refused("bot_trigger", "%s was performed by bot %s" % (action, actor))
+
+
+          def load_pr(repo, number):
+              if not re.fullmatch(r"[0-9]+", str(number)):
+                  raise Refused("fork_pr", "invalid PR number")
+              try:
+                  return api("/repos/%s/pulls/%s" % (repo, number))
+              except Exception as error:
+                  raise Refused("fork_pr", "PR lookup failed: " + type(error).__name__)
+
+
+          def check_fork(event_name, event, repo):
+              pr = None
+              if event_name in PR_PAYLOAD_EVENTS:
+                  pr = event.get("pull_request")
+                  if pr is None:
+                      raise Refused("fork_pr", "PR event has no pull_request payload")
+              elif event_name == "issue_comment" and (event.get("issue") or {}).get("pull_request"):
+                  # Comment payloads omit the head repo, so it must be looked up.
+                  pr = load_pr(repo, event["issue"].get("number"))
+              elif ENV.get("TARGET_PR", "").strip():
+                  pr = load_pr(repo, ENV["TARGET_PR"].strip())
+              if pr is None:
+                  return
+              head_repo = (pr.get("head") or {}).get("repo")
+              if not head_repo:
+                  raise Refused("fork_pr", "PR head repository is unavailable")
+              if head_repo.get("fork") or str(head_repo.get("full_name", "")).lower() != repo.lower():
+                  raise Refused("fork_pr", "PR comes from a fork")
+
+
+          def check_containment(event_name, event, repo):
+              if repo.lower() not in csv_set(ENV.get("AGENT_PILOT_REPOS")):
+                  raise Refused("containment", "repository is not on the pilot allowlist")
+              if ENV.get("AGENT_MANUAL_ONLY", "").strip().lower() != "false" \
+                      and event_name != "workflow_dispatch":
+                  raise Refused("containment", "manual trigger only; got " + event_name)
+              if event_name == "workflow_dispatch":
+                  default_branch = (event.get("repository") or {}).get("default_branch")
+                  if not default_branch or ENV.get("GITHUB_REF") != "refs/heads/" + default_branch:
+                      raise Refused("containment", "manual runs must start from the default branch")
+
+
+          def write_outputs(allowed, group):
+              path = ENV.get("GITHUB_OUTPUT")
+              if path:
+                  with open(path, "a") as output:
+                      output.write("allowed=%s\nconcurrency_group=%s\n" % (allowed, group))
+
+
+          def finish(decision, rule, reason, actor, action, group=""):
+              record = {
+                  "decision": decision,
+                  "rule": rule,
+                  "reason": safe(reason, 200),
+                  "event": safe(ENV.get("GITHUB_EVENT_NAME", "")),
+                  "action": safe(action),
+                  "actor": safe(actor),
+                  "repository": safe(ENV.get("GITHUB_REPOSITORY", "")),
+                  "run_id": safe(ENV.get("GITHUB_RUN_ID", "")),
+                  "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              }
+              # Stable prefix so log searches can audit every decision.
+              print("PREFLIGHT_DECISION " + json.dumps(record, sort_keys=True))
+              allowed = decision == "allowed"
+              write_outputs("true" if allowed else "false", group)
+              summary = ENV.get("GITHUB_STEP_SUMMARY")
+              if summary:
+                  with open(summary, "a") as handle:
+                      handle.write("### Agent pre-flight: %s\n\nRule `%s`: %s\n"
+                                   % (decision, rule, record["reason"]))
+              if not allowed:
+                  print("::error title=Agent pre-flight refused::%s: %s" % (rule, record["reason"]))
+                  return 1
+              print("::notice title=Agent pre-flight passed::group %s" % group)
+              return 0
+
+
+          def main():
+              actor, action = ENV.get("GITHUB_ACTOR", ""), ""
+              try:
+                  check_kill_switch()
+                  with open(ENV["GITHUB_EVENT_PATH"]) as handle:
+                      event = json.load(handle)
+                  event_name = ENV["GITHUB_EVENT_NAME"]
+                  repo = ENV["GITHUB_REPOSITORY"]
+                  action = event.get("action") or ""
+                  sender = event.get("sender") or {}
+                  actor = sender.get("login") or actor
+                  if not actor:
+                      raise Refused("write_access", "no actor on event")
+                  bot = is_bot(actor, sender.get("type", "")) \
+                      or is_bot(ENV.get("GITHUB_TRIGGERING_ACTOR", ""))
+                  check_write_access(event_name, event, action, repo, actor, bot)
+                  check_bot_trigger(action, actor, bot)
+                  check_fork(event_name, event, repo)
+                  check_containment(event_name, event, repo)
+                  group = "agent-" + repo.lower()
+                  return finish("allowed", "all", "all checks passed", actor, action, group)
+              except Refused as refusal:
+                  return finish("refused", refusal.rule, refusal.reason, actor, action)
+              except Exception as error:
+                  return finish("refused", "internal_error", type(error).__name__, actor, action)
+
+
+          sys.exit(main())

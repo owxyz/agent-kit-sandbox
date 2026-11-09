@@ -1,0 +1,62 @@
+# Pattern for an agent workflow (tickets P0.4, P0.9, P0.10). Copy it as
+# .github/workflows/agent-<name>.yml and replace the final step.
+#
+# What makes it safe:
+#   - The agent job needs the pre-flight, so a refusal skips it.
+#   - It holds the one-agent-per-repo group for its whole run. The group is on
+#     this job, not the pre-flight, so refused events never queue in it.
+#   - It checks out only the default branch, without persisted credentials.
+#   - Context files, prompts and MCP config are copied out of the base commit's
+#     git objects, so nothing in a working tree or PR can change them.
+name: agent-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Task for the agent
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  preflight:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/agent-preflight.yml
+
+  run-agent:
+    needs: preflight
+    if: needs.preflight.outputs.allowed == 'true'
+    concurrency:
+      group: ${{ needs.preflight.outputs.concurrency-group }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the default branch only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Load agent config from the base commit
+        run: >-
+          python3 .github/agent-kit/scripts/load_agent_config.py
+          --repo . --base-ref HEAD --dest "$RUNNER_TEMP/agent-config"
+
+      - name: Run the agent
+        env:
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+          AGENT_TASK: ${{ inputs.task }}
+        run: |
+          # REPLACE: call your agent CLI, installed at an exact version from
+          # .github/agent-tools, and point it only at the loaded config, e.g.
+          #   claude -p "$AGENT_TASK" --strict-mcp-config \
+          #     --mcp-config "$RUNNER_TEMP/agent-config/.mcp.json"
+          echo "::error::agent-run.example.yml has no agent command configured"
+          exit 1
