@@ -1,0 +1,30 @@
+name: proof-app
+on:
+  pull_request:
+permissions: {}
+jobs:
+  post:
+    name: proof-app-poster
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      checks: write
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          app-id: 5697454
+          private-key: ${{ secrets.PROOF_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-checks: write
+      - name: Post proof-app-check as the App
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=proof-app-check -f head_sha="$HEAD_SHA" -f status=completed -f conclusion=success --jq '"posted by app \(.app.id)"'
+      - name: Post proof-token-check with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs" -f name=proof-token-check -f head_sha="$HEAD_SHA" -f status=completed -f conclusion=success --jq '"posted by app \(.app.id)"'
