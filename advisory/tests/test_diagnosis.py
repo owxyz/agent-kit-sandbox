@@ -7,7 +7,7 @@ import json
 import os
 
 from advisory_service.agents.diagnosis import DiagnosisAgent
-from advisory_service.checks import CheckRunSpec, render, required_names, validate_name
+from advisory_service.checks import CheckRunSpec, render, validate_name
 from advisory_service.models import ModelError, ModelRefused
 from advisory_service import logs, signals
 
@@ -72,14 +72,19 @@ class CheckRun(Harness):
             validate_name("provenance")
 
     def test_not_in_the_repository_required_checks(self):
-        path = os.path.join(os.path.dirname(__file__), "..", "..", "gates", "integrity", "config", "required-checks.json")
-        if not os.path.exists(path):
-            self.skipTest("gates/ not present")
-        with open(path) as handle:
-            names = required_names(json.load(handle))
-        self.assertIn("provenance", names)
-        self.assertNotIn("advisory/diagnosis", names)
-        self.assertNotIn("advisory/llm-judge", names)
+        # The source config in the project, or the installed ruleset in a pilot repo.
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+        candidates = [
+            os.path.join(root, "gates", "integrity", "config", "required-checks.json"),
+            os.path.join(root, ".github", "agent-kit", "integrity", "rulesets", "required-checks-pinned.json"),
+        ]
+        found = [path for path in candidates if os.path.exists(path)]
+        self.assertTrue(found, "no required-checks list found; point this test at the repository's list")
+        for path in found:
+            with open(path) as handle:
+                names = _contexts(json.load(handle))
+            self.assertIn("provenance", names, path)
+            self.assertFalse([n for n in names if n.startswith("advisory/")], path)
 
 
 class Ratings(Harness):
@@ -255,3 +260,13 @@ class InjectionLogs(Harness):
 
     def test_diagnosis_declares_only_what_it_uses(self):
         self.assertEqual(DiagnosisAgent.permissions, {"actions": "read", "checks": "write"})
+
+
+def _contexts(value):
+    """Every "context" string in a required-checks config or an exported ruleset."""
+    if isinstance(value, dict):
+        found = [value["context"]] if isinstance(value.get("context"), str) else []
+        return found + [name for item in value.values() for name in _contexts(item)]
+    if isinstance(value, list):
+        return [name for item in value for name in _contexts(item)]
+    return []

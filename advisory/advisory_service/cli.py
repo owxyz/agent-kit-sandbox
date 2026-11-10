@@ -98,7 +98,8 @@ def make_handler(service: AdvisoryService):
     return Handler
 
 
-def serve(host: str, port: int, workers: int = 4, depth: int = 200) -> None:
+def start_workers(workers: int = 4, depth: int = 200) -> Callable[[Callable[[], None]], bool]:
+    """Start worker threads and return `submit`, which is False when the queue is full."""
     jobs: "queue.Queue[Callable[[], None]]" = queue.Queue(maxsize=depth)
 
     def submit(job: Callable[[], None]) -> bool:
@@ -117,6 +118,11 @@ def serve(host: str, port: int, workers: int = 4, depth: int = 200) -> None:
 
     for _ in range(workers):
         threading.Thread(target=work, daemon=True).start()
+    return submit
+
+
+def serve(host: str, port: int, workers: int = 4, depth: int = 200) -> None:
+    submit = start_workers(workers, depth)
     ThreadingHTTPServer((host, port), make_handler(build_service(submit))).serve_forever()
 
 

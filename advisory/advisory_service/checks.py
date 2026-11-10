@@ -6,7 +6,7 @@ model returns, can choose one. The only place those values are set is `render`.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, Sequence, Tuple
 
 CONCLUSION = "neutral"
 NAME_PREFIX = "advisory/"
@@ -91,7 +91,3 @@ def _annotation(item: Annotation) -> Dict[str, Any]:
     if item.title:
         body["title"] = item.title[:255]
     return body
-
-
-def required_names(config: Dict[str, Any]) -> List[str]:
-    return [c["context"] for c in config.get("checks", [])]

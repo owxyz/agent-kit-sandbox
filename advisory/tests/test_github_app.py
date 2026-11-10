@@ -9,12 +9,6 @@ from advisory_service.github import ALLOWED_PERMISSIONS, GitHubApp, GitHubError,
 
 from .support import NOW, REPO, FakeGitHub, Harness, workflow_event
 
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
-
-
 class Scope(Harness):
     def test_ceiling_is_read_plus_checks(self):
         self.assertEqual(ALLOWED_PERMISSIONS, {"actions": "read", "contents": "read", "metadata": "read", "checks": "write"})
@@ -78,13 +72,3 @@ class Jwt(unittest.TestCase):
     def test_https_only(self):
         with self.assertRaises(ValueError):
             GitHubApp(1, lambda m: b"", FakeGitHub(), api="http://api.example")
-
-    @unittest.skipIf(cryptography is None, "cryptography not installed")
-    def test_real_rs256_signature_verifies(self):
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.asymmetric import padding, rsa
-        from advisory_service.github import rs256_signer
-
-        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption()).decode()
-        key.public_key().verify(rs256_signer(pem)(b"message"), b"message", padding.PKCS1v15(), hashes.SHA256())

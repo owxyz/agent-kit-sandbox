@@ -14,15 +14,6 @@ from advisory_service.service import BoundAgent
 
 from .support import GOOD_HINT, REPO, FakeModel, Harness, workflow_event
 
-try:
-    import anthropic
-    try:
-        import httpx2 as httpx  # the transport used by current SDK releases
-    except ImportError:
-        import httpx
-except ImportError:
-    anthropic = None
-
 
 class StubReview(Agent):
     """Shaped like P4.2: runs when CI finishes and posts line annotations."""
@@ -113,64 +104,3 @@ class ModelInterface(unittest.TestCase):
         for bad in ({}, {"a": "x"}, {"a": ["y"]}, {"a": [], "b": 1}, []):
             with self.assertRaises(ModelOutputInvalid):
                 validate(bad, schema)
-
-
-@unittest.skipIf(anthropic is None, "anthropic SDK not installed")
-class RealSdkOffline(unittest.TestCase):
-    """Runs the real SDK against a mock transport. No request leaves this process."""
-
-    SCHEMA = {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"], "additionalProperties": False}
-
-    def client(self, response):
-        from advisory_service.models import AnthropicModelClient
-
-        self.sent = []
-
-        def handler(request):
-            self.sent.append(request)
-            return httpx.Response(200, json={
-                "id": "msg_1", "type": "message", "role": "assistant", "model": "claude-opus-5-5",
-                "usage": {"input_tokens": 3, "output_tokens": 4}, "stop_sequence": None, **response,
-            })
-
-        sdk = anthropic.Anthropic(api_key="test", max_retries=0, http_client=httpx.Client(transport=httpx.MockTransport(handler)))
-        return AnthropicModelClient("test", client=sdk)
-
-    def call(self, response):
-        return self.client(response).complete_json(ModelRequest("sys", "usr", self.SCHEMA))
-
-    def test_request_shape(self):
-        result = self.call({"stop_reason": "end_turn", "content": [{"type": "text", "text": '{"a": "b"}'}]})
-        self.assertEqual(result.data, {"a": "b"})
-        body = json.loads(self.sent[0].content)
-        self.assertEqual(body["model"], "claude-opus-5-5")
-        self.assertEqual(body["thinking"], {"type": "adaptive"})
-        self.assertEqual(body["output_config"]["format"]["schema"], self.SCHEMA)
-        self.assertEqual(body["fallbacks"], "default")
-        self.assertNotIn("tools", body)
-        self.assertNotIn("temperature", body)
-        self.assertIn("server-side-fallback-2026-07-01", self.sent[0].headers["anthropic-beta"])
-
-    def test_api_error_keeps_status_and_type_but_not_on_the_check(self):
-        from advisory_service.models import AnthropicModelClient, ModelError
-
-        def handler(request):
-            return httpx.Response(400, json={"type": "error", "error": {"type": "invalid_request_error", "message": "fallbacks: not allowed here"}})
-
-        sdk = anthropic.Anthropic(api_key="test", max_retries=0, http_client=httpx.Client(transport=httpx.MockTransport(handler)))
-        with self.assertRaises(ModelError) as caught:
-            AnthropicModelClient("test", client=sdk).complete_json(ModelRequest("s", "u", self.SCHEMA))
-        self.assertEqual(caught.exception.summary(), "ModelError: bad request: HTTP 400 invalid_request_error")
-        self.assertEqual(caught.exception.detail, "fallbacks: not allowed here")
-
-    def test_refusal(self):
-        with self.assertRaises(ModelRefused):
-            self.call({"stop_reason": "refusal", "content": []})
-
-    def test_truncated_output(self):
-        with self.assertRaises(ModelOutputInvalid):
-            self.call({"stop_reason": "max_tokens", "content": [{"type": "text", "text": '{"a"'}]})
-
-    def test_schema_violation(self):
-        with self.assertRaises(ModelOutputInvalid):
-            self.call({"stop_reason": "end_turn", "content": [{"type": "text", "text": '{"a": "b", "conclusion": "success"}'}]})

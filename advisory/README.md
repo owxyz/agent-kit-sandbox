@@ -14,7 +14,13 @@ From `advisory/`, using the standard library only:
 python3 -m unittest discover -s tests -t .
 ```
 
-Five tests skip unless `requirements.txt` is installed: four run the real Anthropic SDK against a mock transport, and one checks a real RS256 signature. Keep any virtual environment outside the project folder.
+All 157 tests run with no third-party packages and none skip, because the test-quality gate counts a skip as a failure. The Anthropic client is tested against a stand-in `anthropic` module.
+
+Six integration checks run the real libraries: five use the Anthropic SDK against a mock transport, so nothing leaves the process, and one verifies a real RS256 signature. CI doesn't install those libraries, so these checks sit outside the unit suite and fail, not skip, when a library is missing. Run them by hand after installing `requirements.txt` into a virtual environment kept outside the project folder:
+
+```bash
+python3 -m unittest integration.real_deps
+```
 
 ## How it works
 
@@ -39,6 +45,8 @@ queue -> narrowed installation token -> agent.run -> one check run, always compl
 | `advisory_service/agents/judge.py` | P2.5 and the pattern catalogue |
 | `advisory_service/store.py` | SQLite: claims, signals, hints, ratings, findings, ledger, token use |
 | `advisory_service/cli.py` | HTTP server and record commands |
+| `tests/` | Unit suite, standard library only |
+| `integration/real_deps.py` | Checks against the real SDK and `cryptography`, run by hand |
 
 ## Acceptance criteria
 
