@@ -85,8 +85,9 @@ def resolve_merge_base(repo, base_sha, head_sha):
 
 
 def changed_files(repo, merge_base, head_sha):
-    output = git(repo, "diff", "--no-ext-diff", "--no-color", "-U0", "-M", "--src-prefix=a/",
-                 "--dst-prefix=b/", merge_base, head_sha)
+    # A PR's .gitattributes must not hide changed lines (-diff, binary) or select a diff driver (diff=name).
+    output = git(repo, "diff", "--text", "--no-ext-diff", "--no-textconv", "--no-color", "-U0", "-M",
+                 "--src-prefix=a/", "--dst-prefix=b/", merge_base, head_sha)
     return parse_diff(text(output))
 
 
