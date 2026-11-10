@@ -1,0 +1,18 @@
+# Stand-in for test-quality: real on PRs, passes without running in the queue.
+name: proof-test-quality
+on:
+  pull_request:
+  merge_group:
+permissions: {}
+jobs:
+  test-quality:
+    name: proof-test-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$EVENT" = merge_group ]; then echo "Passes without running in the queue."; exit 0; fi
+          case "$HEAD_REF" in *fail*) exit 1 ;; esac

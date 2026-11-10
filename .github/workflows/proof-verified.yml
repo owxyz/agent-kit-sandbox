@@ -1,0 +1,56 @@
+# Required check `required-checks-verified` (ticket P2.9).
+#
+# GitHub counts skipped and neutral results as passing a required check, so this
+# job waits for the others and accepts only success from each pinned identity.
+# In the queue, gates that do not really rerun there are confirmed on the PR head
+# instead (see config/required-checks.json). Scripts come from the base commit,
+# and nothing from the PR runs.
+name: proof-verified
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  merge_group:
+
+permissions: {}
+
+# Newer events replace a run still waiting. pull_request_review is left out on
+# purpose: its YAML comes from the PR, so re-run this job by hand after a review.
+concurrency:
+  group: proof-verified-${{ github.event.pull_request.number || github.event.merge_group.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: proof-verified
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    permissions:
+      contents: read
+      checks: read
+      pull-requests: read
+    steps:
+      - name: Check out base-branch scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Verify every required check succeeded
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          # The queue wait covers the held-out run on the merge commit and stays
+          # under the merge queue's 60-minute check timeout.
+          WAIT_SECONDS: ${{ github.event_name == 'merge_group' && '3300' || '5400' }}
+        run: |
+          queue_args=()
+          if [ -n "$QUEUE_REF" ]; then
+            queue_args=(--queue-ref "$QUEUE_REF")
+          fi
+          python3 .trusted/.github/agent-kit/integrity/scripts/verify_required_checks.py \
+            --config .trusted/.github/agent-kit/integrity/config/required-checks.json \
+            --repo "$GITHUB_REPOSITORY" --sha "$HEAD_SHA" --wait "$WAIT_SECONDS" \
+            --exclude proof-verified "${queue_args[@]}"

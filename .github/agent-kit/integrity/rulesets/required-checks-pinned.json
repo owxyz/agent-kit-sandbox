@@ -1,0 +1,36 @@
+{
+  "name": "proof",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/integrity-proof/queue-base"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [
+          {
+            "context": "proof-check-integrity",
+            "integration_id": 15368
+          },
+          {
+            "context": "proof-test-quality",
+            "integration_id": 15368
+          },
+          {
+            "context": "proof-verified",
+            "integration_id": 15368
+          }
+        ]
+      }
+    }
+  ]
+}

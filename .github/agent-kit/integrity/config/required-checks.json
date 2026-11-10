@@ -1,0 +1,27 @@
+{
+  "checks": [
+    {
+      "context": "proof-check-integrity",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "proof",
+      "queue": "merge"
+    },
+    {
+      "context": "proof-test-quality",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "proof",
+      "queue": "pr-head"
+    },
+    {
+      "context": "proof-verified",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "proof",
+      "queue": "merge"
+    }
+  ],
+  "status_writers": [],
+  "reviewed_exceptions": []
+}
