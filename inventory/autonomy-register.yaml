@@ -17,8 +17,8 @@ agents:
     level: Advise
     token_scope:
       identity: Own GitHub App, run from the app service outside PR workflows
-      permissions: {contents: read, checks: write}
-      notes: Read access plus checks only, so it cannot approve PRs.
+      permissions: {actions: read, contents: read, checks: write}
+      notes: Read access plus checks only, so it cannot approve PRs. Actions read is needed for workflow_run events, job lists and job logs. Job tokens are narrowed to actions read and checks write.
     promotion_metric:
       name: Diagnosis "not helpful" rate
       target: Under 10%
@@ -42,7 +42,8 @@ agents:
     level: Advise
     token_scope:
       identity: Own GitHub App, run from the app service outside PR workflows
-      permissions: {contents: read, checks: write}
+      permissions: {actions: read, contents: read, checks: write}
+      notes: Actions read is needed only to receive workflow_run events. Job tokens are narrowed to contents read and checks write.
     promotion_metric:
       name: TBD
       target: TBD
