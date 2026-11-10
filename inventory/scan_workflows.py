@@ -70,12 +70,20 @@ _GITHUB_TOKEN = re.compile(r"(?<![\w.])github\.token\b", re.I)
 _RAW_USES = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^\s'\"#]+)", re.M)
 _PR_HEAD = re.compile(
     r"github\.event\.pull_request\.(head|merge_commit_sha)|github\.head_ref|refs/pull/", re.I)
-# Shell commands that fetch or check out PR code.
-_PR_CODE_COMMAND = re.compile(
-    r"\bgh\s+pr\s+checkout\b"
-    r"|\bgit\s+(fetch|checkout|pull|switch)\b[^\n]*(refs/pull/|\bpull/|head_ref|pull_request\.(head|merge_commit_sha))",
-    re.I,
-)
+# Values that identify the PR's own code, used to taint env variables.
+_PR_VALUE = re.compile(
+    r"github\.event\.pull_request\.(head|merge_commit_sha|number)|github\.head_ref|github\.event\.number|refs/pull/",
+    re.I)
+_GH_PR_CHECKOUT = re.compile(r"\bgh\s+pr\s+checkout\b", re.I)
+_GIT_FETCH = re.compile(r"\bgit\s+(fetch|checkout|pull|switch)\b", re.I)
+_COMMAND_SEPARATOR = re.compile(r"&&|\|\||;|\|")
+# Under pull_request_target these all resolve to the base repo's own code.
+_BASE_REFS = {
+    "github.event.pull_request.base.sha", "github.event.pull_request.base.ref",
+    "github.base_ref", "github.sha", "github.ref", "github.event.repository.default_branch",
+    "github.event.merge_group.base_sha",
+}
+_WHOLE_EXPRESSION = re.compile(r"^\s*\$\{\{(.*)\}\}\s*$", re.S)
 _COMMENT_LINE = re.compile(r"^\s*#.*$", re.M)
 
 
@@ -181,10 +189,21 @@ def _read_text(path):
         return handle.read()
 
 
+def _passes_through_link(repo_path, relative):
+    """True if any folder or file on the way to `relative` is a symlink."""
+    current = repo_path
+    for part in os.path.normpath(relative).split(os.sep):
+        current = os.path.join(current, part)
+        if os.path.islink(current):
+            return True
+    return False
+
+
 def _local_action_labels(repo_path, uses, extra):
+    """Agent labels from a local composite action, or None if it cannot be read."""
     relative = os.path.normpath(uses)
-    if relative.startswith(".."):
-        return []
+    if relative.startswith("..") or _passes_through_link(repo_path, relative):
+        return None
     base = os.path.join(repo_path, relative)
     for name in ("action.yml", "action.yaml"):
         try:
@@ -201,7 +220,45 @@ def _local_action_labels(repo_path, uses, extra):
             if isinstance(step, dict):
                 labels += _step_labels(step, extra)
         return labels
-    return []
+    return None
+
+
+def _ref_is_base(value):
+    """True when a checkout input provably names the base repo's code."""
+    if value is None or value == "":
+        return True
+    text = str(value)
+    if "${{" not in text:
+        return True
+    match = _WHOLE_EXPRESSION.match(text)
+    if not match:
+        return False
+    return all(operand.strip().lower() in _BASE_REFS for operand in match.group(1).split("||"))
+
+
+def _tainted_env(env, inherited):
+    """Names of env variables whose value carries a PR ref, plus inherited ones."""
+    names = set(inherited)
+    for name, value in (env.items() if isinstance(env, dict) else []):
+        if isinstance(value, str) and _PR_VALUE.search(value):
+            names.add(str(name))
+    return names
+
+
+def _run_fetches_pr_code(run, tainted):
+    text = _COMMENT_LINE.sub("", run).replace("\\\n", " ")
+    for line in text.splitlines():
+        for command in _COMMAND_SEPARATOR.split(line):
+            if _GH_PR_CHECKOUT.search(command):
+                return True
+            if not _GIT_FETCH.search(command):
+                continue
+            if _PR_VALUE.search(command) or re.search(r"(^|\s)pull/", command):
+                return True
+            for name in tainted:
+                if re.search(r"\$\{?" + re.escape(name) + r"\b", command):
+                    return True
+    return False
 
 
 def _step_labels(step, extra):
@@ -219,7 +276,8 @@ def _new_record(relative, parse_error=None):
         "path": relative, "name": None, "agents": set(), "triggers": {},
         "jobs": [], "findings": _Findings(), "parse_error": parse_error,
         "local_calls": {}, "external_calls": {}, "inherit_jobs": set(),
-        "head_checkout_jobs": set(), "callers": set(),
+        "head_checkout_jobs": set(), "unverified_checkout_jobs": set(), "callers": set(),
+        "unread_actions": set(),
     }
 
 
@@ -266,6 +324,7 @@ def scan_workflow(repo_path, relative, extra_patterns):
 def _scan_job(repo_path, job_id, job, document, record, extra_patterns):
     findings = record["findings"]
     findings.walk(job, job_id)
+    job_tainted = _tainted_env(job.get("env"), _tainted_env(document.get("env"), ()))
     permissions, source = _effective_permissions(job, document)
     record["jobs"].append({
         "id": job_id,
@@ -285,17 +344,24 @@ def _scan_job(repo_path, job_id, job, document, record, extra_patterns):
         if not isinstance(step, dict):
             continue
         record["agents"].update(_step_labels(step, extra_patterns))
-        if isinstance(step.get("run"), str) and _PR_CODE_COMMAND.search(_COMMENT_LINE.sub("", step["run"])):
+        tainted = _tainted_env(step.get("env"), job_tainted)
+        if isinstance(step.get("run"), str) and _run_fetches_pr_code(step["run"], tainted):
             record["head_checkout_jobs"].add(job_id)
         step_uses = step.get("uses")
         if isinstance(step_uses, str):
             if step_uses.startswith("./"):
-                record["agents"].update(_local_action_labels(repo_path, step_uses, extra_patterns))
+                labels = _local_action_labels(repo_path, step_uses, extra_patterns)
+                if labels is None:
+                    record["unread_actions"].add((step_uses, job_id))
+                else:
+                    record["agents"].update(labels)
             if step_uses.lower().startswith("actions/checkout"):
                 inputs = step.get("with") if isinstance(step.get("with"), dict) else {}
-                checked_out = " ".join(str(inputs.get(k, "")) for k in ("ref", "repository"))
-                if _PR_HEAD.search(checked_out):
+                ref, repository = inputs.get("ref"), inputs.get("repository")
+                if _PR_HEAD.search("{} {}".format(ref or "", repository or "")):
                     record["head_checkout_jobs"].add(job_id)
+                elif not _ref_is_base(ref) or repository not in (None, "", "${{ github.repository }}"):
+                    record["unverified_checkout_jobs"].add(job_id)
 
 
 def _scan_unparsed(text, record, extra_patterns):
@@ -382,6 +448,9 @@ def _build_flags(record):
         if record["head_checkout_jobs"]:
             _flag(flags, "pull-request-target", "critical", record["head_checkout_jobs"],
                   "pull_request_target job checks out or fetches PR code while base-repo secrets and token are available (banned by P0.4)")
+        elif record["unverified_checkout_jobs"]:
+            _flag(flags, "pull-request-target", "critical", record["unverified_checkout_jobs"],
+                  "pull_request_target job checks out a ref or repository this scan cannot prove is the base; treat it as PR code (P0.4)")
         else:
             _flag(flags, "pull-request-target", "high", [],
                   "runs with base-repo secrets and token on events from forks and PR authors")
@@ -399,6 +468,9 @@ def _build_flags(record):
     if findings.dynamic:
         _flag(flags, "dynamic-secret-reference", "high", [w for w in findings.dynamic if not w.startswith("(")],
               "secret name is computed at run time, so this list may be incomplete")
+    for uses, job_id in sorted(record["unread_actions"]):
+        _flag(flags, "local-action-not-read", "medium", [job_id],
+              "local action {} is missing, invalid or behind a symlink, so agents inside it are unknown".format(uses))
     for uses, job_id in sorted(record["external_calls"].items()):
         _flag(flags, "external-reusable-workflow", "medium", [job_id],
               "calls a workflow outside this repo that this scan cannot see: {}".format(uses))
@@ -443,7 +515,7 @@ def discover_repos(root):
 def scan_repo(name, path, extra_patterns):
     directory = os.path.join(path, ".github", "workflows")
     records = []
-    if os.path.islink(os.path.join(path, ".github")) or os.path.islink(directory):
+    if _passes_through_link(path, os.path.join(".github", "workflows")):
         # A symlink here could point anywhere on disk, so it is reported, not read.
         records.append(_new_record(os.path.join(".github", "workflows"), "skipped: workflows folder is a symlink"))
     elif os.path.isdir(directory):

@@ -489,18 +489,22 @@ class _Parser:
 
 
 def _fold(lines):
-    """Fold lines with spaces, keeping more-indented lines on their own lines."""
+    """Fold line breaks between plain lines; keep every break next to a more-indented line."""
     out = ""
-    for index, line in enumerate(lines):
-        previous = lines[index - 1] if index else ""
-        if index == 0:
-            out = line
-        elif not line.strip():
-            out += "\n"
-        elif not previous.strip():
-            out += line
-        elif line[:1] in " \t" or previous[:1] in " \t":
-            out += "\n" + line
+    last = None
+    blanks = 0
+    for line in lines:
+        if not line.strip():
+            blanks += 1
+            continue
+        if last is None:
+            out += "\n" * blanks + line
+        elif line[:1] in " \t" or last[:1] in " \t":
+            out += "\n" * (blanks + 1) + line
+        elif blanks:
+            out += "\n" * blanks + line
         else:
             out += " " + line
+        last = line
+        blanks = 0
     return out

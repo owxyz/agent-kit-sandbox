@@ -48,14 +48,27 @@ jobs:
             echo "The register could not be read."
             exit "$status"
           fi
+          if [ ! -s alerts.tsv ]; then
+            exit "$status"
+          fi
+          # One search for every open rotation issue, so a busy repo or many
+          # due secrets cost one API call. If it fails, stop before creating
+          # anything, so a failure can never open duplicates.
+          existing=$(gh issue list --state open --limit 1000 \
+            --search 'in:title "Agent secret rotation"' --json title --jq '.[].title')
+          failed=0
           while IFS=$'\t' read -r state id owner message; do
             title="Agent secret rotation ${state}: ${id}"
-            existing=$(gh issue list --state open --search "in:title \"$title\"" --json title --jq '.[].title' < /dev/null)
             if grep -Fxq "$title" <<< "$existing"; then
               continue
             fi
             printf 'Owner: %s\n\nSecret %s: %s.\n\nRotate it: add the new key, deploy it, delete the old one, then update the register. See inventory/README.md.\n' \
               "$owner" "$id" "$message" > body.md
-            gh issue create --title "$title" --body-file body.md < /dev/null
+            # Keep going if one issue fails, so later secrets still get an alert.
+            gh issue create --title "$title" --body-file body.md < /dev/null || failed=1
           done < alerts.tsv
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::At least one rotation issue could not be created."
+            exit 1
+          fi
           exit "$status"
