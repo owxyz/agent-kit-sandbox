@@ -36,6 +36,7 @@ class YamlReasonTests(unittest.TestCase):
             ("%YAML 1.2\na: 1\n", "directives are not supported"),
             ("- a\n---\n- b\n", "multiple YAML documents"),
             ("a: 1\n- b\n", "sequence item where a mapping key"),
+            ("a: 1\nbare words\n", "expected a mapping key"),
             ("a: 'x' y\n", "unexpected content after quoted"),
             ("a: b: c\n", "plain value cannot contain"),
         ]
