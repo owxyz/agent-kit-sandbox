@@ -47,12 +47,13 @@ A workflow counts as an agent workflow when any of these is true:
 | `broad-token-undeclared` | high | No `permissions` block, so the job gets the default token |
 | `broad-token-sensitive-scope` | high | Write on a scope such as `checks`, `actions`, `packages` or `id-token` |
 | `broad-token-contents-write` | medium | `contents: write` on `GITHUB_TOKEN` |
-| `pull-request-target` | high, or critical if it checks out PR code | Includes workflows called from a `pull_request_target` workflow |
+| `pull-request-target` | high, or critical if it checks out or fetches PR code | Critical also covers any checkout whose ref or repository can't be proven to be the base, and git commands that use an env variable carrying a PR ref. Includes workflows called from a `pull_request_target` workflow |
 | `pat-style-secret` | high | Secret name looks like a personal access token |
 | `secrets-inherit` | high | `secrets: inherit` passes every secret to the called workflow |
 | `all-secrets-exposed` | critical | `toJSON(secrets)` |
 | `dynamic-secret-reference` | high | Secret name computed at run time, so the list may be incomplete |
 | `external-reusable-workflow` | medium | Calls a workflow in another repo that the scan cannot see |
+| `local-action-not-read` | medium | A local action is missing, invalid or behind a symlink, so agents inside it are unknown |
 | `parse-error` | high | The file could not be fully parsed; secrets and agent signals are found by text match |
 
 ### Limits
