@@ -1,0 +1,34 @@
+{
+  "_comment": "Install at .github/agent-kit/limits/config/limits.json on the default branch, behind owner approval. The check refuses to run until monthly_tokens is a positive whole number and the running agent is listed under agents. Values marked proposed in limits/README.md are starting points.",
+  "version": 1,
+  "concurrency": {
+    "work_claims_enabled": false,
+    "raised_max_jobs": 1,
+    "per_repo_raised_max_jobs": {},
+    "conflict_rate_target": 0.15,
+    "conflict_window_days": 14,
+    "conflict_min_prs": 20,
+    "conflict_data_max_age_hours": 48,
+    "settle_seconds": 5,
+    "wait_seconds": 180,
+    "poll_seconds": 20,
+    "agent_workflow_globs": [".github/workflows/agent-*.yml"],
+    "excluded_workflows": [
+      ".github/workflows/agent-preflight.yml",
+      ".github/workflows/agent-provenance.yml",
+      ".github/workflows/agent-kit-checks.yml"
+    ]
+  },
+  "budget": {
+    "monthly_tokens": "REPLACE_WITH_MONTHLY_TOKEN_BUDGET",
+    "alert_percent": 80,
+    "cost_data_max_age_days": 3,
+    "allow_empty_cost_history": false,
+    "alert_webhook_env": "LIMITS_ALERT_WEBHOOK"
+  },
+  "review_queue": {
+    "max_waiting_prs": 3,
+    "count_drafts": true
+  },
+  "agents": {}
+}
