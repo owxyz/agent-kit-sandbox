@@ -8,15 +8,15 @@ is not a pass. Run by hand after installing requirements.txt, from advisory/:
 It fails, rather than skips, when a dependency is missing. Nothing leaves this
 process: the SDK runs against a mock transport.
 """
+import importlib
+import importlib.util
 import json
 import unittest
 
 import anthropic
 
-try:
-    import httpx2 as httpx  # the transport used by current SDK releases
-except ImportError:
-    import httpx
+# Current SDK releases use httpx2; older ones use httpx.
+httpx = importlib.import_module("httpx2" if importlib.util.find_spec("httpx2") else "httpx")
 
 from advisory_service.models import ModelOutputInvalid, ModelRefused, ModelRequest
 
