@@ -79,8 +79,12 @@ def parse_date(value, path, report):
 
 
 def _require_known(entry, field, path, report):
-    if is_tbd(entry[field]):
+    value = entry[field]
+    if is_tbd(value):
         report.add("incomplete", "{}.{}".format(path, field), "is TBD")
+        return False
+    if isinstance(value, str) and not value.strip():
+        report.add("incomplete", "{}.{}".format(path, field), "is blank")
         return False
     return True
 
@@ -168,7 +172,8 @@ def _display_owner(owner):
     """The owner on one line, withheld if a credential was typed there."""
     if _CREDENTIAL_SHAPES.search(owner):
         return "(withheld: invalid owner value)"
-    return " ".join(owner.split())
+    # Never empty: the alert job splits on tabs, which collapse empty fields.
+    return " ".join(owner.split()) or "(none)"
 
 
 def validate_register(document, today, report):

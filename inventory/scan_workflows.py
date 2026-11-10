@@ -68,7 +68,14 @@ _SECRET_DYNAMIC = re.compile(r"(?<![\w.])secrets\[\s*[^'\s]", re.I)
 _SECRET_DUMP = re.compile(r"\btojson\(\s*secrets\s*\)", re.I)
 _GITHUB_TOKEN = re.compile(r"(?<![\w.])github\.token\b", re.I)
 _RAW_USES = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^\s'\"#]+)", re.M)
-_PR_HEAD = re.compile(r"github\.event\.pull_request\.head|github\.head_ref|refs/pull/", re.I)
+_PR_HEAD = re.compile(
+    r"github\.event\.pull_request\.(head|merge_commit_sha)|github\.head_ref|refs/pull/", re.I)
+# Shell commands that fetch or check out PR code.
+_PR_CODE_COMMAND = re.compile(
+    r"\bgh\s+pr\s+checkout\b"
+    r"|\bgit\s+(fetch|checkout|pull|switch)\b[^\n]*(refs/pull/|\bpull/|head_ref|pull_request\.(head|merge_commit_sha))",
+    re.I,
+)
 _COMMENT_LINE = re.compile(r"^\s*#.*$", re.M)
 
 
@@ -207,14 +214,18 @@ def _step_labels(step, extra):
     return labels
 
 
-def scan_workflow(repo_path, relative, extra_patterns):
-    """Collect the raw facts for a workflow; flags are computed later."""
-    record = {
+def _new_record(relative, parse_error=None):
+    return {
         "path": relative, "name": None, "agents": set(), "triggers": {},
-        "jobs": [], "findings": _Findings(), "parse_error": None,
+        "jobs": [], "findings": _Findings(), "parse_error": parse_error,
         "local_calls": {}, "external_calls": {}, "inherit_jobs": set(),
         "head_checkout_jobs": set(), "callers": set(),
     }
+
+
+def scan_workflow(repo_path, relative, extra_patterns):
+    """Collect the raw facts for a workflow; flags are computed later."""
+    record = _new_record(relative)
     try:
         text = _read_text(os.path.join(repo_path, relative))
         if text is None:
@@ -274,6 +285,8 @@ def _scan_job(repo_path, job_id, job, document, record, extra_patterns):
         if not isinstance(step, dict):
             continue
         record["agents"].update(_step_labels(step, extra_patterns))
+        if isinstance(step.get("run"), str) and _PR_CODE_COMMAND.search(_COMMENT_LINE.sub("", step["run"])):
+            record["head_checkout_jobs"].add(job_id)
         step_uses = step.get("uses")
         if isinstance(step_uses, str):
             if step_uses.startswith("./"):
@@ -368,7 +381,7 @@ def _build_flags(record):
     if "pull_request_target" in record["effective_triggers"]:
         if record["head_checkout_jobs"]:
             _flag(flags, "pull-request-target", "critical", record["head_checkout_jobs"],
-                  "pull_request_target job checks out PR code while base-repo secrets and token are available (banned by P0.4)")
+                  "pull_request_target job checks out or fetches PR code while base-repo secrets and token are available (banned by P0.4)")
         else:
             _flag(flags, "pull-request-target", "high", [],
                   "runs with base-repo secrets and token on events from forks and PR authors")
@@ -421,7 +434,8 @@ def discover_repos(root):
     repos = []
     for name in sorted(os.listdir(root)):
         path = os.path.join(root, name)
-        if os.path.isdir(path) and not os.path.islink(path):
+        # Symlinked repo folders are followed: the operator builds this folder.
+        if os.path.isdir(path):
             repos.append((name, path))
     return repos
 
@@ -429,7 +443,10 @@ def discover_repos(root):
 def scan_repo(name, path, extra_patterns):
     directory = os.path.join(path, ".github", "workflows")
     records = []
-    if os.path.isdir(directory):
+    if os.path.islink(os.path.join(path, ".github")) or os.path.islink(directory):
+        # A symlink here could point anywhere on disk, so it is reported, not read.
+        records.append(_new_record(os.path.join(".github", "workflows"), "skipped: workflows folder is a symlink"))
+    elif os.path.isdir(directory):
         # GitHub ignores subdirectories of .github/workflows, so this does too.
         for entry in sorted(os.listdir(directory)):
             if entry.endswith((".yml", ".yaml")):
@@ -582,6 +599,9 @@ def main(argv=None):
     except re.error as error:
         parser.error("invalid --agent-pattern: {}".format(error))
 
+    if args.credentials_seed and os.path.exists(args.credentials_seed):
+        parser.error("refusing to overwrite {}".format(args.credentials_seed))
+
     report = scan(args.repos_dir, patterns)
     output = json.dumps(report, indent=2) + "\n" if args.format == "json" else render_text(report, args.all)
     if args.output:
@@ -591,8 +611,6 @@ def main(argv=None):
         sys.stdout.write(output)
 
     if args.credentials_seed:
-        if os.path.exists(args.credentials_seed):
-            parser.error("refusing to overwrite {}".format(args.credentials_seed))
         with open(args.credentials_seed, "w", encoding="utf-8") as handle:
             handle.write(render_seed(report["credentials_to_inventory"]))
 

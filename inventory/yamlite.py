@@ -125,6 +125,10 @@ def _strip_comment(text):
     return text
 
 
+def _is_document_marker(stripped):
+    return stripped == "..." or stripped == "---" or stripped.startswith("--- ")
+
+
 def _is_dash(stripped):
     return stripped == "-" or stripped.startswith("- ")
 
@@ -346,6 +350,8 @@ class _Parser:
         while self._next() and self._indent() == indent:
             line = self.pos + 1
             stripped = self._strip()
+            if _is_document_marker(stripped):
+                break
             if _is_dash(stripped):
                 raise YamlError(line, "sequence item where a mapping key was expected")
             split = _split_key(stripped, line)
@@ -483,14 +489,18 @@ class _Parser:
 
 
 def _fold(lines):
+    """Fold lines with spaces, keeping more-indented lines on their own lines."""
     out = ""
     for index, line in enumerate(lines):
+        previous = lines[index - 1] if index else ""
         if index == 0:
             out = line
         elif not line.strip():
             out += "\n"
-        elif not lines[index - 1].strip():
+        elif not previous.strip():
             out += line
+        elif line[:1] in " \t" or previous[:1] in " \t":
+            out += "\n" + line
         else:
             out += " " + line
     return out

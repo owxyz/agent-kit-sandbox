@@ -48,9 +48,9 @@ jobs:
             echo "The register could not be read."
             exit "$status"
           fi
-          existing=$(gh issue list --state open --limit 500 --json title --jq '.[].title')
           while IFS=$'\t' read -r state id owner message; do
             title="Agent secret rotation ${state}: ${id}"
+            existing=$(gh issue list --state open --search "in:title \"$title\"" --json title --jq '.[].title' < /dev/null)
             if grep -Fxq "$title" <<< "$existing"; then
               continue
             fi

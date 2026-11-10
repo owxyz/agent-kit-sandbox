@@ -37,7 +37,8 @@ fetch org-fine-grained-pats.json "/orgs/$org/personal-access-tokens" \
 fetch org-sso-credentials.json "/orgs/$org/credential-authorizations" \
   '.[] | {login, credential_type, scopes, credential_authorized_at}'
 
-while read -r full; do
+# The list is read on fd 3 so a command that reads stdin cannot consume it.
+while read -r full <&3; do
   repo=${full#*/}
   if [ ! -d "$out/repos/$repo" ]; then
     gh repo clone "$full" "$out/repos/$repo" -- --depth 1 --quiet || echo "clone $full" >> "$failures"
@@ -53,6 +54,6 @@ while read -r full; do
   else
     echo "/repos/$full/environments" >> "$failures"
   fi
-done < "$out/repos.txt"
+done 3< "$out/repos.txt"
 
 echo "Done. Calls that were unavailable are listed in $failures"
