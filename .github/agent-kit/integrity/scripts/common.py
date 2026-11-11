@@ -5,12 +5,14 @@ Exit codes for every CLI here: 0 nothing blocks, 1 a block-mode finding exists,
 """
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 
 GATE = "integrity"
+ACTIONS_APP_ID = 15368
 FINDING_FIELDS = ("gate", "rule", "severity", "mode", "file", "line", "message")
 
 
@@ -82,11 +84,58 @@ def load_required_checks(paths):
                 if not isinstance(context, str) or not context:
                     raise ToolError("%s has a required check without a context" % path)
                 if not isinstance(app, int) or isinstance(app, bool) or app <= 0:
-                    raise ToolError("%s: %s is not pinned to an app" % (path, context))
+                    raise ToolError("%s: %s is not pinned to an app; is its placeholder still unset?" % (path, context))
                 if required.get(context, app) != app:
                     raise ToolError("%s is pinned to two different apps" % context)
                 required[context] = app
     return required
+
+
+def load_check_config(path):
+    """Return the validated required-checks config (see config/required-checks.json)."""
+    data = load_json(path)
+    entries = data.get("checks") if isinstance(data, dict) else None
+    if not isinstance(entries, list) or not entries:
+        raise ToolError("%s lists no checks" % path)
+    required = {}
+    for entry in entries:
+        context = entry.get("context") if isinstance(entry, dict) else None
+        if not isinstance(context, str) or not context or context in required:
+            raise ToolError("%s has a missing or repeated context" % path)
+        app = entry.get("integration_id")
+        if not isinstance(app, int) or isinstance(app, bool) or app <= 0:
+            raise ToolError("%s: %s is not pinned to an app; is its placeholder still unset?" % (path, context))
+        if entry.get("dedicated_app") and app == ACTIONS_APP_ID:
+            raise ToolError("%s: %s needs its own App, not GitHub Actions" % (path, context))
+        if entry.get("kind") not in ("check_run", "status"):
+            raise ToolError("%s: %s has an unknown kind" % (path, context))
+        if entry.get("queue") not in ("merge", "pr-head"):
+            raise ToolError("%s: %s has an unknown queue policy" % (path, context))
+        if entry["kind"] == "status" and (
+                not isinstance(entry.get("creator_id"), int) or not isinstance(entry.get("workflow"), str)):
+            raise ToolError("%s: status %s needs creator_id and workflow" % (path, context))
+        required[context] = entry
+    return {
+        "required": required,
+        "status_writers": {(w["workflow"], w["job"]) for w in data.get("status_writers", [])},
+        "exceptions": {(x["rule"], x["workflow"], x["job"]) for x in data.get("reviewed_exceptions", [])},
+    }
+
+
+def queue_pr_number(ref):
+    """Read the PR number from a merge queue ref. An unexpected ref is a tool error."""
+    match = re.fullmatch(r"(?:refs/heads/)?gh-readonly-queue/.+/pr-(\d+)-[0-9a-f]+", ref or "")
+    if not match:
+        raise ToolError("not a merge queue ref: %r" % ref)
+    return int(match.group(1))
+
+
+def pr_head_sha(github, repo, number):
+    pull = github.get_json("/repos/%s/pulls/%d" % (repo, number))
+    sha = (pull.get("head") or {}).get("sha") if isinstance(pull, dict) else None
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ToolError("PR %d has no head SHA" % number)
+    return sha
 
 
 class GitHub:
@@ -150,5 +199,5 @@ class GitHub:
             page += 1
 
 
-def quote(value):
-    return urllib.parse.quote(str(value), safe="")
+def quote(value, safe=""):
+    return urllib.parse.quote(str(value), safe=safe)
