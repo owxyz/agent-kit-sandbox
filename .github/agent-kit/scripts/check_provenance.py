@@ -134,6 +134,12 @@ def main():
         print("::error title=Provenance::could not load PR data: %s" % type(error).__name__)
         return 1
     findings, notices, is_agent = evaluate(pr, commits, logins)
+    if pr.get("draft") is True:
+        # A draft can't merge or enter the merge queue, and marking it ready for
+        # review runs this check again. Checking now would only record a stale
+        # failure from before the agent could add its label.
+        notices = ["draft PR; provenance is checked when it is marked ready for review"]
+        findings = []
     for notice in notices:
         print("::notice title=Provenance::%s" % notice)
     for finding in findings:
