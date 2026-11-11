@@ -1,6 +1,6 @@
-def add(a, b):
-    return a + b
+def add(left, right):
+    return left + right
 
 
-def abs_diff(a, b):
-    return a - b
+def abs_diff(left, right):
+    return left - right
