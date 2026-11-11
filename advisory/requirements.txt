@@ -1,0 +1,4 @@
+# Runtime only. Tests use the standard library and a fake model client.
+# Pin exact versions with hashes when this is deployed.
+anthropic>=2.6,<3
+cryptography>=50,<51
