@@ -80,3 +80,6 @@ test/                           @Yimunan
 **/pyproject.toml               @Yimunan
 **/setup.cfg                    @Yimunan
 **/package.json                 @Yimunan
+
+# Agent inventory and autonomy register (P0.1, P0.13)
+/inventory/                     @Yimunan

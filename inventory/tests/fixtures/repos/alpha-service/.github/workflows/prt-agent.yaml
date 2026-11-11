@@ -1,0 +1,23 @@
+name: PR target agent
+"on":
+  pull_request_target:
+    types: [opened, synchronize]
+permissions: write-all
+env:
+  LITERAL_VALUE: FAKE_LITERAL_VALUE_DO_NOT_PRINT
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        key_name: [FIRST_KEY, SECOND_KEY]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets['OPENAI_API_KEY'] }}
+      - run: ./tool --key "${{ secrets[matrix.key_name] }}" --all "${{ toJSON(secrets) }}"
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}

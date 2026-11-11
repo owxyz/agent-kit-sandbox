@@ -1,0 +1,10 @@
+name: Caller
+on: pull_request_target
+jobs:
+  call:
+    uses: ./.github/workflows/agent-reusable.yml
+    secrets: inherit
+  remote:
+    uses: example-org/shared/.github/workflows/agent.yml@v1
+    permissions:
+      contents: read

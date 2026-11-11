@@ -1,0 +1,20 @@
+name: Reusable agent
+on:
+  workflow_call:
+    secrets:
+      RELEASE_APP_PRIVATE_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
+permissions:
+  contents: read
+  checks: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          npm install -g @anthropic-ai/claude-code
+          claude -p "fix it"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
