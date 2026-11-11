@@ -1,0 +1,10 @@
+# Build output and caches; agents must not commit these (red-team finding #13).
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+node_modules/
+.venv/
+.DS_Store
