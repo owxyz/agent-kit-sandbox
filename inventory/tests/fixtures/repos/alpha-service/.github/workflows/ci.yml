@@ -1,0 +1,15 @@
+# ${{ secrets.COMMENTED_OUT }} is in a comment and must not be reported.
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Not secrets context
+        run: |
+          python -c "import secrets; print(secrets.token_hex(8))"
+          # The word claude alone is not an agent run.
+          echo claude is mentioned here

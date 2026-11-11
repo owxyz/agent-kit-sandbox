@@ -1,0 +1,7 @@
+# Copy these lines into the CODEOWNERS file of the repo that hosts the register,
+# and replace the placeholder with a real team. Require code-owner review on the
+# default branch with a ruleset, or this file has no effect.
+/inventory/autonomy-register.yaml          @YOUR-ORG/agent-platform-owners
+/inventory/schemas/                        @YOUR-ORG/agent-platform-owners
+/inventory/validate.py                     @YOUR-ORG/agent-platform-owners
+/inventory/manual-credentials.yaml         @YOUR-ORG/security-owners

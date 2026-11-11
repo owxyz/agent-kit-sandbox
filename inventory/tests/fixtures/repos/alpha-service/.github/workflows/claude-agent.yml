@@ -1,0 +1,23 @@
+name: Claude agent
+on:
+  issue_comment:
+    types: [created]
+  pull_request:
+    branches: [main, "release/**"]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{secrets.ORG_GH_PAT}}
+      - name: Comment
+        run: gh pr comment "$PR" --body "finished"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}

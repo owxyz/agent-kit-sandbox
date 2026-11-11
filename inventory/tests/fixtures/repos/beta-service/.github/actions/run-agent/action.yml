@@ -1,0 +1,7 @@
+name: Run agent
+description: Local composite action wrapping an agent CLI
+runs:
+  using: composite
+  steps:
+    - run: claude -p "nightly cleanup"
+      shell: bash

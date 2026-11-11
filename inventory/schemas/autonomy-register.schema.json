@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Autonomy register (P0.13)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "agents",
+    "other_secret_holders",
+    "secrets"
+  ],
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "date_or_tbd": {
+      "type": "string",
+      "pattern": "^(TBD|[0-9]{4}-[0-9]{2}-[0-9]{2})$"
+    },
+    "permission": {
+      "type": "string",
+      "enum": [
+        "none",
+        "read",
+        "write"
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rotation_days",
+        "alert_days_before",
+        "due_soon_days"
+      ],
+      "properties": {
+        "rotation_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "alert_days_before": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "due_soon_days": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "job",
+          "plan_ref",
+          "level",
+          "token_scope",
+          "promotion_metric"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "job": {
+            "$ref": "#/$defs/text"
+          },
+          "plan_ref": {
+            "type": "string",
+            "pattern": "^P[0-9]+\\.[0-9]+$"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "Advise",
+              "Suggest",
+              "Act with gates"
+            ]
+          },
+          "token_scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "identity",
+              "permissions"
+            ],
+            "properties": {
+              "identity": {
+                "$ref": "#/$defs/text"
+              },
+              "notes": {
+                "$ref": "#/$defs/text"
+              },
+              "permissions": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "contents"
+                ],
+                "properties": {
+                  "contents": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "pull_requests": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "checks": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "issues": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "statuses": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "actions": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "administration": {
+                    "$ref": "#/$defs/permission"
+                  },
+                  "workflows": {
+                    "$ref": "#/$defs/permission"
+                  }
+                }
+              }
+            }
+          },
+          "promotion_metric": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "target"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/text"
+              },
+              "target": {
+                "$ref": "#/$defs/text"
+              },
+              "notes": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "other_secret_holders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "coding-agent",
+              "app-service"
+            ]
+          },
+          "description": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "holder",
+          "kind",
+          "owner",
+          "secrets_manager_location",
+          "last_rotated",
+          "rotation_date",
+          "alert_date"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "holder": {
+            "$ref": "#/$defs/id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "github-app-private-key",
+              "model-api-key",
+              "webhook-secret"
+            ]
+          },
+          "owner": {
+            "$ref": "#/$defs/text"
+          },
+          "secrets_manager_location": {
+            "$ref": "#/$defs/text"
+          },
+          "last_rotated": {
+            "$ref": "#/$defs/date_or_tbd"
+          },
+          "rotation_days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "rotation_date": {
+            "$ref": "#/$defs/date_or_tbd"
+          },
+          "alert_date": {
+            "$ref": "#/$defs/date_or_tbd"
+          }
+        }
+      }
+    }
+  }
+}
