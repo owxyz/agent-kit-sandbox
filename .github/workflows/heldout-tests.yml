@@ -1,0 +1,195 @@
+# P2.10 held-out tests, for PRs and merge-queue commits. Install at .github/workflows/
+# and require the check "heldout-tests" pinned to the status App. See
+# gates/critical/README.md for the threat model.
+#
+# Separation of duties, one VM per job:
+#   snapshot  PR code as a tar. No secrets; never runs it.
+#   fetch     Tests from the private repo. Holds the App key; never sees PR code.
+#   run       Tests and PR code in two no-network containers joined by a relay.
+#             Holds only the transport key, never passed to a container.
+#   report    Posts the check as the status App. Touches neither.
+name: heldout-tests
+
+on:
+  workflow_run:
+    workflows: [heldout-trigger]
+    types: [completed]
+
+permissions: {}
+
+env:
+  GATE_DIR: .github/agent-kit/critical
+  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  guard:
+    if: contains(fromJSON('["pull_request","merge_group"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Refuse forks and unexpected merge-queue refs
+        env:
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          TRIGGER: ${{ github.event.workflow_run.event }}
+        run: |
+          if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::Held-out tests do not run on fork PRs. A maintainer must push the branch here."
+            exit 1
+          fi
+          if [ "$TRIGGER" = "merge_group" ]; then
+            case "$HEAD_BRANCH" in
+              gh-readonly-queue/*) ;;
+              *) echo "::error::merge_group run is not on a merge-queue ref."; exit 1 ;;
+            esac
+          fi
+
+  snapshot:
+    needs: guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - run: git archive --format=tar -o "$RUNNER_TEMP/pr.tar" HEAD
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pr-snapshot
+          path: ${{ runner.temp }}/pr.tar
+          retention-days: 1
+
+  fetch:
+    needs: guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Holds the private-repo App key. Restrict deployment branches to the default branch.
+    environment: heldout-fetch
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          app-id: ${{ vars.HELDOUT_APP_ID }}
+          private-key: ${{ secrets.HELDOUT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ vars.HELDOUT_TESTS_REPO_NAME }}
+          permission-contents: read
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/${{ vars.HELDOUT_TESTS_REPO_NAME }}
+          ref: ${{ vars.HELDOUT_TESTS_REF }}
+          token: ${{ steps.app.outputs.token }}
+          path: heldout-source
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r "$GATE_DIR/requirements.txt"
+      - name: Seal tests
+        env:
+          HELDOUT_TRANSPORT_KEY: ${{ secrets.HELDOUT_TRANSPORT_KEY }}
+        run: >
+          python "$GATE_DIR/scripts/heldout_gate.py" seal
+          --input heldout-source
+          --output "$RUNNER_TEMP/tests.sealed"
+          --aad "$GITHUB_RUN_ID|$HEAD_SHA"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: heldout-bundle
+          path: ${{ runner.temp }}/tests.sealed
+          retention-days: 1
+
+  run:
+    needs: [snapshot, fetch]
+    runs-on: ubuntu-24.04
+    # Stays inside the merge queue's 60-minute response limit, with the other jobs.
+    timeout-minutes: 45
+    # Holds only the transport key, in a different environment from the App key.
+    environment: heldout-run
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r "$GATE_DIR/requirements.txt"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pr-snapshot
+          path: ${{ runner.temp }}/in
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: heldout-bundle
+          path: ${{ runner.temp }}/in
+      - name: Unpack PR code without running it
+        run: |
+          mkdir "$RUNNER_TEMP/pr"
+          tar -xf "$RUNNER_TEMP/in/pr.tar" -C "$RUNNER_TEMP/pr" --no-same-owner
+      - name: Run held-out tests in the sandbox
+        env:
+          HELDOUT_TRANSPORT_KEY: ${{ secrets.HELDOUT_TRANSPORT_KEY }}
+        run: >
+          python "$GATE_DIR/scripts/heldout_gate.py" run
+          --config "$GATE_DIR/critical-modules.yaml"
+          --pr-dir "$RUNNER_TEMP/pr"
+          --bundle "$RUNNER_TEMP/in/tests.sealed"
+          --aad "$GITHUB_RUN_ID|$HEAD_SHA"
+          --work-dir "$RUNNER_TEMP/work"
+          --findings "$RUNNER_TEMP/heldout-findings.json"
+          --diagnostics "$RUNNER_TEMP/diagnostics.sealed"
+      # Findings hold counts only. Diagnostics are encrypted.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: heldout-results
+          path: |
+            ${{ runner.temp }}/heldout-findings.json
+            ${{ runner.temp }}/diagnostics.sealed
+          retention-days: 7
+
+  report:
+    needs: [guard, snapshot, fetch, run]
+    # Must run after failures: anything but a successful run posts a failure.
+    if: always() && contains(fromJSON('["pull_request","merge_group"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Holds the status App key. Restrict deployment branches to the default branch.
+    environment: heldout-report
+    permissions: {}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          app-id: ${{ vars.HELDOUT_STATUS_APP_ID }}
+          private-key: ${{ secrets.HELDOUT_STATUS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-checks: write
+      - name: Post required check as the status App
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          RUN_RESULT: ${{ needs.run.result }}
+        run: |
+          if [ "$RUN_RESULT" = "success" ]; then
+            conclusion=success; text="Held-out tests passed"
+          else
+            conclusion=failure; text="Held-out tests failed or could not run"
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs" \
+            -f name=heldout-tests -f head_sha="$HEAD_SHA" -f status=completed \
+            -f conclusion="$conclusion" \
+            -f details_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            -f "output[title]=$text" -f "output[summary]=$text"

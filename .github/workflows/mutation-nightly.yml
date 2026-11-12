@@ -1,0 +1,88 @@
+# P2.6 nightly mutation testing. Install at .github/workflows/.
+# The measure job runs repository code and holds no secrets. The alert job holds
+# the alert secret and runs no repository code other than this gate's scripts.
+name: mutation-nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  GATE_DIR: .github/agent-kit/critical
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install project dependencies and test tools
+        # calc.py has no dependencies; test_command needs only pytest.
+        run: pip install pytest==9.2.0
+      - name: Install gate
+        run: pip install -r "$GATE_DIR/requirements.txt"
+      - name: Measure
+        run: >
+          python "$GATE_DIR/scripts/mutation_gate.py" measure
+          --config "$GATE_DIR/critical-modules.yaml"
+          --report "$RUNNER_TEMP/mutation-report.json"
+          --findings "$RUNNER_TEMP/measure-findings.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutation-report
+          path: ${{ runner.temp }}/mutation-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  alert:
+    needs: measure
+    # Must run after a failed measure: a missing report alerts every owner.
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Holds the alert secret. Restrict its deployment branches to the default branch.
+    environment: mutation-alerts
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r "$GATE_DIR/requirements.txt"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: mutation-report
+          path: ${{ runner.temp }}/report
+      - name: Compare with floors and alert owners
+        env:
+          # Name it to match mutation.alert.url_env in the config.
+          MUTATION_ALERT_WEBHOOK: ${{ secrets.MUTATION_ALERT_WEBHOOK }}
+        run: >
+          python "$GATE_DIR/scripts/mutation_gate.py" evaluate
+          --config "$GATE_DIR/critical-modules.yaml"
+          --report "$RUNNER_TEMP/report/mutation-report.json"
+          --findings "$RUNNER_TEMP/mutation-findings.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutation-findings
+          path: ${{ runner.temp }}/mutation-findings.json
+          retention-days: 30
