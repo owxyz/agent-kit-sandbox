@@ -1325,6 +1325,1339 @@
           "runs": 5
         }
       }
+    },
+    {
+      "sha": "02efc3356ee074ff4e3207ad8beb8333147cbf96",
+      "tests": {
+        "advisory/tests/test_diagnosis.py::CheckRun::test_is_neutral_completed_named_and_on_the_head_sha": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::CheckRun::test_name_cannot_collide_with_a_required_check": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::CheckRun::test_not_helpful_action": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::CheckRun::test_not_in_the_repository_required_checks": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::CheckRun::test_one_name_per_workflow_and_hostile_names_are_cleaned": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::CheckRun::test_spec_has_no_way_to_set_a_conclusion": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_compromised_model_cannot_add_a_conclusion_field": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_compromised_model_cannot_change_anything_structural": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_compromised_model_cannot_invent_a_failure_type": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_diagnosis_declares_only_what_it_uses": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_exit_line_from_another_step_is_ignored": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_exit_text_inside_a_longer_line_does_not_count": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_hostile_workflow_names_are_inert_in_the_table": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_log_cannot_close_the_fence": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_log_text_cannot_change_signals": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_nonce_changes_per_request": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_pr_controlled_metadata_is_not_sent": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_printed_exit_line_is_flagged_and_last_line_wins": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_system_prompt_holds_no_untrusted_text_and_no_tools_are_offered": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::InjectionLogs::test_tool_is_never_read_from_the_log": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Ratings::test_another_apps_check_is_ignored": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Ratings::test_forged_rating_is_rejected": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Ratings::test_rating_is_recorded_and_counted_once_per_person": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Ratings::test_unknown_check_and_action_are_ignored": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_every_failed_job_is_reported_separately": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_missing_log_still_reports_signals": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_refusal_is_handled": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_signals_contain_no_model_text": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_signals_stored_when_the_model_is_down": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_step_name_tool_mapping": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Signals::test_structured_fields": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Trigger::test_no_pr_needed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Trigger::test_runs_for_failures_only": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Trigger::test_runs_for_human_and_agent_prs": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_diagnosis.py::Trigger::test_timeout_and_startup_failure_count": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::CliPaths::test_bad_content_length_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::CliPaths::test_full_queue_and_crashing_job": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::CliPaths::test_missing_setting_stops_startup": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::CliPaths::test_setting_read_from_file": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_check_creation_failure": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_compare_failure": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_http_transport_returns_error_responses": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_list_jobs_failure": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_log_failure": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::GitHubFailures::test_token_request_failure": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::Limits::test_action_field_limits": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::Limits::test_at_most_three_actions": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::Limits::test_retention_must_outlast_event_age": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ModelClientWithoutSdk::test_connection_error": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ModelClientWithoutSdk::test_every_status_error_keeps_status_and_type": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ModelClientWithoutSdk::test_status_error_without_a_body": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ModelClientWithoutSdk::test_success_and_request_shape": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ModelClientWithoutSdk::test_unusable_responses": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ServiceInputs::test_malformed_rating_is_rejected": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_error_paths.py::ServiceInputs::test_unparseable_timestamp_is_treated_as_too_old": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Jwt::test_claims": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Jwt::test_https_only": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::LogDownload::test_insecure_redirect_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::LogDownload::test_token_is_not_sent_to_the_log_host": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_agents_stay_inside_the_ceiling_and_cannot_write_prs": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_broader_token_from_github_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_ceiling_is_read_plus_checks": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_client_can_only_create_check_runs": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_token_is_narrowed_to_one_repo_and_agent_permissions": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_github_app.py::Scope::test_write_permissions_are_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_c_style": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_closer_inside_a_string_cannot_hide_code": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_comment_only_change_is_dropped": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_generated_and_binary_are_omitted": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_html_and_sql": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_hunk_header_context_is_removed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_hunk_starting_inside_block_comment": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_javascript_and_template_strings": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_multi_line_docstring": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_python_hash_and_docstring": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_shell_hash_rules": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_size_limit_lists_what_was_dropped": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_triple_quoted_value_stays": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_unbalanced_triple_quote_cannot_hide_code": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::CommentStripping::test_unknown_and_prose_files_are_omitted": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::InjectionDiffs::test_comment_injection_is_stripped_and_string_injection_stays_fenced": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::InjectionDiffs::test_compromised_model_cannot_change_the_result": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::InjectionDiffs::test_extra_or_unknown_fields_are_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::InjectionDiffs::test_unknown_category_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_alternative_failure_does_not_stop_the_judge": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_check_is_neutral_and_a_quiet_result_is_not_a_pass": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_compares_with_an_alternative_written_without_the_candidate": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_description_commit_message_and_comments_never_reach_the_model": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_empty_after_stripping_skips_the_model": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_fetches_the_diff_only_and_never_the_pr": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_findings_are_capped": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_infeasible_alternative": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_model_failure_posts_neutral": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_runs_after_workflow_finishes_on_prs_only": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_runs_once_per_head_commit": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_secrets_in_the_diff_are_redacted": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Judge::test_without_tests_there_is_no_alternative_and_it_says_so": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Ledger::test_a_model_finding_is_not_a_confirmed_hack": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Ledger::test_catalogue_matches_the_plan": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_judge.py::Ledger::test_person_confirms_by_catalogue_category": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Cli::test_confirm_records_by_category": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Cli::test_confirm_refuses_unknown_findings_and_categories": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Cli::test_signals_keep_the_hint_under_its_own_key": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::ModelInterface::test_providers_are_pluggable": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::ModelInterface::test_validator": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Reuse::test_a_new_agent_plugs_in_with_no_service_changes": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Reuse::test_agents_are_isolated_by_path": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Reuse::test_an_agent_asking_for_too_much_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_platform.py::Reuse::test_an_agent_with_a_bad_check_name_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::EndToEnd::test_nothing_sensitive_reaches_the_model": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::EndToEnd::test_redactor_failure_stops_the_model_call": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::ModelEcho::test_secret_echoed_by_model_is_removed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_header_after_the_first_second_never_moves_the_start": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_printed_header_or_exit_line_cannot_hide_failing_output": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_repeated_lines_collapse": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_secret_is_gone_after_trim": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_trim_bounds_size_and_reports_omission": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_window_keeps_only_the_failing_step": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::PreparedLogs::test_window_trims_neighbouring_steps_in_the_same_second": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_ansi_cannot_split_a_token": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_assignments_headers_and_urls": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_clean_removes_bidi_and_tag_characters": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_diagnostic_detail_is_kept": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_empty_value_does_not_swallow_the_next_line": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_high_entropy_without_a_label": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_idempotent": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_identity_literals": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_invisible_characters_cannot_split_a_token": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_known_token_formats": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_masked_secret_lines_from_actions": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_non_luhn_digits_are_kept": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_personal_data": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_private_key_block": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_redact.py::Redaction::test_private_key_cut_off_before_its_end_marker": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_empty_secret_is_refused_at_startup": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_missing_delivery_header": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_missing_signature": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_ping": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_repository_not_on_the_allowlist": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_rotation_accepts_old_and_new_secret_only": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_sha1_style_and_junk_signatures": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_signature_for_a_different_body": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_signed_but_malformed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_signed_event_with_a_bad_run_id_is_ignored": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_unhandled_event_types_are_acknowledged": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_unknown_path_and_oversize": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_unsigned_garbage_is_not_parsed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::ForgedWebhooks::test_wrong_secret": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::OverSocket::test_http_round_trip_and_forged_request": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_a_new_run_attempt_gets_its_own_check": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_exact_replay_runs_once": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_failed_job_can_be_redelivered": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_full_queue_releases_the_claim": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_kill_switch_fails_closed_and_leaves_event_redeliverable": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_old_event_refused_even_if_digest_forgotten": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_replay_with_a_fresh_delivery_id_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "advisory/tests/test_webhook.py::Replay::test_same_run_in_a_different_body_runs_once": {
+          "failures": 0,
+          "runs": 5
+        },
+        "calc.test.js::absDiff is never negative": {
+          "failures": 0,
+          "runs": 5
+        },
+        "calc.test.js::add": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::CliReasonTests::test_scanner_rejects_bad_pattern": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::CliReasonTests::test_validate_rejects_bad_today": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::ScannerFileTests::test_invalid_local_action_adds_no_agent_label": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::ScannerFileTests::test_non_utf8_workflow_is_reported": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::ScannerFileTests::test_workflow_that_is_not_a_mapping_is_reported": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::SchemaReasonTests::test_remote_ref_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::SchemaReasonTests::test_unknown_type_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::YamlReasonTests::test_each_rejection_reports_its_reason": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_error_paths.py::YamlReasonTests::test_flow_values_continue_across_lines": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::AlertFieldTests::test_alert_owner_is_never_empty": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::AlertFieldTests::test_blank_owner_is_incomplete": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::FetchScriptTests::test_every_repo_is_cloned_when_a_command_reads_stdin": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::PullRequestCodeTests::test_commented_or_unrelated_commands_stay_high": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::PullRequestCodeTests::test_merge_commit_checkout_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::PullRequestCodeTests::test_shell_checkout_of_pr_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::SeedTests::test_existing_seed_refused_before_any_output": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::SymlinkTests::test_symlinked_repo_folder_is_scanned": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::SymlinkTests::test_symlinked_workflows_folder_is_reported_not_read": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::YamlDocumentTests::test_end_marker_after_mapping": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::YamlDocumentTests::test_folded_scalar_keeps_more_indented_lines": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_review_fixes.py::YamlDocumentTests::test_second_document_after_mapping_is_named": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_agent_pattern_option": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_classify_secret": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_command_after_a_comment_still_counts": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_commented_command_is_not_an_agent": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_fail_on_exit_code": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_generic_agent_key_marks_agent_and_is_inventoried": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_job_permissions_override_workflow": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_json_output_is_valid": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_no_network_or_subprocess_imports": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_other_secret_on_agent_workflow_is_inventoried": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_secret_expression_forms": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_seed_passes_schema_and_is_incomplete": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_symlinked_workflow_is_not_followed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_trigger_forms": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::BehaviourTests::test_workflow_subdirectories_are_ignored": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_agent_action_trigger_permissions_secrets": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_literal_values_are_never_output": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_local_composite_action_is_an_agent": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_non_agent_has_no_false_positives": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_non_agent_secret_is_not_reported_as_followup": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_pull_request_target_running_pr_code_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_reusable_workflow_propagation": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_summary_counts": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_scan_workflows.py::FixtureScanTests::test_unparseable_file_is_reported_with_text_fallback": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::AlertJobTests::test_failed_list_creates_nothing": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::AlertJobTests::test_one_list_call_and_a_failed_create_does_not_stop_later_alerts": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::CheckoutAllowlistTests::test_base_refs_stay_high": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::CheckoutAllowlistTests::test_other_repository_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::CheckoutAllowlistTests::test_unprovable_refs_are_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::CommandSplitTests::test_backslash_continued_fetch_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::CommandSplitTests::test_pr_expression_in_another_command_stays_high": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::EnvIndirectionTests::test_job_env_carrying_pr_ref_into_git_is_critical": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::EnvIndirectionTests::test_step_and_workflow_env_are_tracked": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::EnvIndirectionTests::test_untainted_env_in_git_stays_high": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::FoldTests::test_blank_lines_next_to_indented_lines_are_kept": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::FoldTests::test_leading_blank_line_is_kept": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::LocalActionTests::test_missing_action_is_flagged": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_second_review_fixes.py::LocalActionTests::test_symlinked_actions_folder_is_not_read": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::AlertTests::test_both_date_hints_appear_in_one_pass": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::AlertTests::test_credential_in_owner_is_withheld": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::AlertTests::test_no_alerts_when_nothing_is_due": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::AlertTests::test_one_line_per_secret_with_owner": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CliTests::test_credentials_needs_a_file": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CliTests::test_default_register_exit_codes": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CliTests::test_json_format": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CliTests::test_today_flag_changes_result": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CliTests::test_unreadable_and_invalid_files": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_broad_cannot_be_na": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_broad_needs_owner_and_removal_date": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_complete_is_clean": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_overdue_removal": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_token_in_notes_rejected_and_not_echoed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_unreviewed_is_incomplete": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::CredentialRuleTests::test_value_field_rejected": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterContentTests::test_policy_default_is_90_days": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterContentTests::test_shipped_register_is_valid_but_incomplete": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterContentTests::test_shipped_template_is_valid_but_incomplete": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterContentTests::test_starting_levels_match_plan": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_admin_and_workflow_scope_rejected": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_advise_agent_cannot_write_contents": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_alert_must_precede_rotation": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_ci_location_rejected": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_complete_register_is_clean": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_credential_shaped_value_rejected_and_not_echoed": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_due_soon_warns_without_failing": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_due_today_is_due_soon_not_overdue": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_invalid_calendar_date": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_missing_model_key_entry": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_overdue": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_passed_alert_date_warns": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_rotation_beyond_interval": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_schema_errors": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_tbd_date_gives_90_day_hint": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_unknown_holder_and_duplicate_id": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::RegisterRuleTests::test_webhook_secret_required": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::SchemaliteTests::test_bool_is_not_integer": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::SchemaliteTests::test_messages_do_not_echo_values": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::SchemaliteTests::test_shipped_schemas_use_supported_keywords": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_validate.py::SchemaliteTests::test_unknown_keyword_is_refused": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_anchor_and_alias": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_block_scalar_in_sequence_item": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_block_scalars": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_colon_inside_url_is_not_a_key": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_comments": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_error_does_not_repeat_line_content": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_flow_collections_with_expressions": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_multiline_flow": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_multiline_plain": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_on_key_stays_a_string": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_rejected_input": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_scalars": {
+          "failures": 0,
+          "runs": 5
+        },
+        "inventory/tests/test_yamlite.py::LoadTests::test_sequence_at_parent_indent": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_calc.py::test_abs_diff_is_never_negative": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_calc.py::test_add": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_check_provenance.py::test_draft_pr_is_deferred_until_ready": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_check_provenance.py::test_ready_or_non_boolean_draft_is_still_checked[False]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_check_provenance.py::test_ready_or_non_boolean_draft_is_still_checked[yes]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_current_runs_for_a_dedicated_app_takes_its_newest_post": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_emit_writes_stdout_or_file_and_returns_exit_code": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_evaluate_check_run_rules": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_evaluate_routes_by_kind_and_queue_policy": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_evaluate_status_rules": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_extract_runs_accepts_each_shape": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_fetch_runs_pages_until_total": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_fetch_runs_refuses_bad_responses[pages0]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_fetch_runs_refuses_bad_responses[pages1]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_fetch_runs_refuses_bad_responses[pages2]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_fetch_runs_refuses_bad_responses[pages3]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_finding_severity_follows_mode": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_github_get_raw": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_github_list_all_follows_pages": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_github_needs_a_token": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_github_request_and_get_json": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_github_request_with_body_and_failures": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_latest_suite_ignores_a_stale_failed_suite": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_reads_entries": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[None]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks10]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks11]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks1]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks2]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks3]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks4]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks5]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks6]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks7]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks8]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_check_config_refuses_bad_entries[checks9]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_json_errors": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_reads_pins": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data0]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data1]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data2]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data3]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data4]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data5]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data6]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data7]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_required_checks_refuses_bad_rulesets[data8]": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_load_saved_statuses": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_main_live_merge_queue_reads_statuses_on_the_pr_head": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_main_live_stops_at_the_deadline": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_main_live_waits_for_pending_then_passes": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_main_refuses_short_shas_and_bad_repos": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_main_saved_mode": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_pr_head_sha": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_queue_pr_number": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_quote": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_required_from": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_run_maps_results_and_errors_to_exit_codes": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_small_helpers": {
+          "failures": 0,
+          "runs": 5
+        },
+        "tests/test_integrity_verifier.py::test_still_pending": {
+          "failures": 0,
+          "runs": 5
+        }
+      }
     }
   ],
   "version": 1
