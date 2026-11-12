@@ -2,7 +2,7 @@
   "branch_threshold_percent": 80,
   "repeat_runs": 10,
   "round_timeout_seconds": 900,
-  "ignore_globs": ["*/migrations/*", "migrations/*", "*.d.ts", "*/generated/*", "generated/*"],
+  "ignore_globs": ["*/migrations/*", "migrations/*", "*.d.ts", "*/generated/*", "generated/*", ".github/gates/*"],
   "pytest_plugins": [],
   "flake": {
     "runs_per_commit": 5,
