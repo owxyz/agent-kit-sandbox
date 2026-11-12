@@ -210,7 +210,7 @@ These ticket criteria cannot be met or tested from this folder.
 | P0.13 | Add an alert on unusual model API spend |
 | P0.13 | Install `templates/register-check.yml`, pinning `actions/checkout` to a SHA. It validates PRs and opens an issue daily when a rotation is overdue or due soon |
 | P0.13 | Run side-by-side checks on real agent changes until P4.8 exists, using `templates/agent-change-pull-request-template.md` |
-| P0.13 | List the real coding agents in place of `coding-agent-tbd` after P0.2 |
+| P0.13 | Give `claude-code` a dedicated model key, then fill in its dates; move its App key into the secrets manager |
 
 ## Tests
 

@@ -76,8 +76,9 @@ class RegisterContentTests(unittest.TestCase):
         self.assertEqual(categories(report), {"incomplete"})
         self.assertEqual(report.exit_code(), 3)
         self.assertEqual(report.exit_code(allow_incomplete=True), 0)
-        self.assertIn("$.secrets[0].owner", paths(report, "incomplete"))
-        self.assertIn("$.secrets[0].secrets_manager_location", paths(report, "incomplete"))
+        self.assertNotIn("$.secrets[0].owner", paths(report, "incomplete"))
+        self.assertIn("$.secrets[0].rotation_date", paths(report, "incomplete"))
+        self.assertIn("$.secrets[0].last_rotated", paths(report, "incomplete"))
         self.assertIn("$.agents[2].promotion_metric.target", paths(report, "incomplete"))
 
     def test_shipped_template_is_valid_but_incomplete(self):
