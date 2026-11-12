@@ -1,8 +1,17 @@
-# Re-runs `required-checks-verified` after a review fixes `test-quality` (P2.9).
+# Re-runs the checks a review can fix, after a review fixes `test-quality` (P2.9).
 #
 # A pull_request_review trigger on the verifier would run YAML the PR controls.
 # workflow_run always uses the default branch's copy of this file, and this job
-# runs nothing from the PR. It only asks GitHub to re-run a failed verifier.
+# runs nothing from the PR. It only asks GitHub to re-run failed runs.
+#
+# Two re-runs are needed, as the sandbox showed on 2026-11-12 (PR 60):
+# - the failed `required-checks-verified` for this commit;
+# - the newest failed `test-quality` run from a PR event. GitHub's required
+#   check keeps counting that run, so the review-triggered success alone left
+#   the PR blocked. It is re-run in full, because a failed-jobs re-run reuses
+#   the `context` job's stale "not approved" output.
+# The re-run reports as a `pull_request` event, which this job ignores, so it
+# can't loop.
 name: rerun-verifier
 
 on:
@@ -34,4 +43,19 @@ jobs:
           echo "Verifier run: ${run_id:-none} ${status:-} ${conclusion:-}"
           if [ "$status" = completed ] && [ "$conclusion" = failure ]; then
             gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/rerun-failed-jobs"
+          fi
+
+      - name: Re-run the PR-event test-quality run if it failed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # Runs come newest first; only PR events count, never this review's own run.
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test-quality.yml/runs?head_sha=$HEAD_SHA&per_page=50" \
+            --jq '[.workflow_runs[] | select(.event == "pull_request")][0] // empty | "\(.id) \(.status) \(.conclusion)"')"
+          read -r run_id status conclusion <<< "$latest"
+          echo "PR-event test-quality run: ${run_id:-none} ${status:-} ${conclusion:-}"
+          if [ "$status" = completed ] && [ "$conclusion" = failure ]; then
+            # In full, so the context job reads the approval again.
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/rerun"
           fi
