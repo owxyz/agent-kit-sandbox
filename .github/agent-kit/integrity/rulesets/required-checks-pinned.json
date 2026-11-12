@@ -30,6 +30,14 @@
             "integration_id": 15368
           },
           {
+            "context": "tamper-check",
+            "integration_id": 15368
+          },
+          {
+            "context": "check-integrity",
+            "integration_id": 15368
+          },
+          {
             "context": "required-checks-verified",
             "integration_id": 15368
           }
