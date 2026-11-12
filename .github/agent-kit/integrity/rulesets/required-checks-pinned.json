@@ -34,6 +34,10 @@
             "integration_id": 15368
           },
           {
+            "context": "heldout-tests",
+            "integration_id": 5725673
+          },
+          {
             "context": "check-integrity",
             "integration_id": 15368
           },
