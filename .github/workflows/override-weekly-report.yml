@@ -1,0 +1,42 @@
+# Weekly override review (ticket P2.7). Files one issue per week for the check
+# owners; closing it records the review. Install in the audit repo.
+#
+# Vars: GATE_AUDIT_REPO. Secrets: AUDIT_REPO_TOKEN.
+name: override-weekly-report
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  report:
+    name: override-weekly-report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the report
+        env:
+          AUDIT_REPO: ${{ vars.GATE_AUDIT_REPO }}
+          AUDIT_REPO_TOKEN: ${{ secrets.AUDIT_REPO_TOKEN }}
+        run: >-
+          python3 .github/agent-kit/integrity/scripts/override_report.py
+          --audit-repo "$AUDIT_REPO" --output-md "$RUNNER_TEMP/report.md"
+
+      - name: Publish for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Weekly gate override review" \
+            --body-file "$RUNNER_TEMP/report.md"

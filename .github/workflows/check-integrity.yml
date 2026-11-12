@@ -1,0 +1,98 @@
+# Required check `check-integrity` (tickets P2.9, P2.7).
+#
+# Uses pull_request_target on purpose: the workflow and scripts come from the
+# base branch, so a PR cannot edit its own check or reach the audit secrets. The
+# workflow files under test arrive through the API as data, and nothing from the
+# PR runs. This job needs no checks permission.
+#
+# On merge_group GitHub reads this YAML from the merge commit, which is why
+# owner review of workflow files (P2.1) must hold before the queue is trusted.
+# The scripts still come from the base commit.
+#
+# Vars: GATE_AUDIT_REPO, AGENT_BOT_LOGINS. Secrets: AUDIT_REPO_TOKEN,
+# AUDIT_REPO_READ_TOKEN, OVERRIDE_TEAM_TOKEN (read access to org team membership).
+name: check-integrity
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  check-integrity:
+    name: check-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out base-branch scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -r .trusted/.github/agent-kit/requirements.txt
+
+      - name: Fetch the commit's workflow files as data
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/integrity/scripts/fetch_pr_workflows.py
+          --repo "$GITHUB_REPOSITORY" --sha "$HEAD_SHA" --dest "$RUNNER_TEMP/pr"
+
+      - name: Lint
+        id: lint
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: |
+          integrity=.trusted/.github/agent-kit/integrity
+          lint_exit=0
+          "$RUNNER_TEMP/venv/bin/python" "$integrity/scripts/lint_check_integrity.py" \
+            "$RUNNER_TEMP/pr/.github/workflows" \
+            --config "$integrity/config/required-checks.json" \
+            --ruleset "$integrity/rulesets/required-checks-pinned.json" \
+            --output "$RUNNER_TEMP/findings.json" || lint_exit=$?
+          echo "exit=$lint_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Apply any owner override
+        if: github.event_name == 'pull_request_target'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LINT_EXIT: ${{ steps.lint.outputs.exit }}
+          AUDIT_REPO: ${{ vars.GATE_AUDIT_REPO }}
+          AGENT_BOT_LOGINS: ${{ vars.AGENT_BOT_LOGINS }}
+          AUDIT_REPO_TOKEN: ${{ secrets.AUDIT_REPO_TOKEN }}
+          OVERRIDE_TEAM_TOKEN: ${{ secrets.OVERRIDE_TEAM_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/integrity/scripts/apply_override.py
+          --gate integrity --findings "$RUNNER_TEMP/findings.json" --gate-exit "$LINT_EXIT"
+          --codeowners .trusted/.github/CODEOWNERS --repo "$GITHUB_REPOSITORY"
+          --pr "$PR_NUMBER" --sha "$HEAD_SHA" --audit-repo "$AUDIT_REPO"
+          --path-prefix "$RUNNER_TEMP/pr/" --run-url "$RUN_URL"
+          --output "$RUNNER_TEMP/decision.json"
+
+      # The queue reads the audit log with a read-only token, and logs nothing.
+      - name: Honor overrides already audited on the PR
+        if: github.event_name == 'merge_group'
+        env:
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          LINT_EXIT: ${{ steps.lint.outputs.exit }}
+          AUDIT_REPO: ${{ vars.GATE_AUDIT_REPO }}
+          AUDIT_REPO_TOKEN: ${{ secrets.AUDIT_REPO_READ_TOKEN }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/integrity/scripts/apply_queue_override.py
+          --gate integrity --findings "$RUNNER_TEMP/findings.json" --gate-exit "$LINT_EXIT"
+          --repo "$GITHUB_REPOSITORY" --queue-ref "$QUEUE_REF" --audit-repo "$AUDIT_REPO"
+          --path-prefix "$RUNNER_TEMP/pr/" --output "$RUNNER_TEMP/decision.json"
