@@ -90,9 +90,17 @@ agents:
 
 # Secret holders that are not CI-step agents.
 other_secret_holders:
-  - id: coding-agent-tbd
+  - id: claude-code
     type: coding-agent
-    description: Placeholder. Replace with one entry per coding agent once P0.2 names them, each with its own secrets below.
+    description: >-
+      Claude Code (P0.2), the coding agent. It runs in the runtime sandbox as the
+      owxyz-coding-agent GitHub App (id 5709045), installed on
+      owxyz/agent-kit-sandbox only, with contents and pull_requests write. Its PRs
+      carry the agent:claude-code label. Its CLI version and model are one pair in
+      runtime/sandbox/agent-pair.json, gated by the P4.8 eval gate under this id.
+      The App's webhook secret is unused, because its webhook is inactive. Where
+      each key is held today is in the private manual-credentials.yaml, not here,
+      because this register is also published on the public sandbox.
   - id: app-service
     type: app-service
     description: The GitHub App service that runs the advisory agents and receives GitHub event notifications.
@@ -101,120 +109,128 @@ secrets:
   - id: diagnosis-app-key
     holder: diagnosis
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/diagnosis-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: diagnosis-model-key
     holder: diagnosis
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/diagnosis-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: review-app-key
     holder: review
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/review-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: review-model-key
     holder: review
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/review-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: llm-judge-app-key
     holder: llm-judge
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/llm-judge-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: llm-judge-model-key
     holder: llm-judge
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/llm-judge-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: narrow-repair-app-key
     holder: narrow-repair
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/narrow-repair-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: narrow-repair-model-key
     holder: narrow-repair
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/narrow-repair-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: broad-repair-app-key
     holder: broad-repair
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/broad-repair-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: broad-repair-model-key
     holder: broad-repair
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/broad-repair-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: dependency-repair-app-key
     holder: dependency-repair
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/dependency-repair-app-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: dependency-repair-model-key
     holder: dependency-repair
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/dependency-repair-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
-  - id: coding-agent-tbd-app-key
-    holder: coding-agent-tbd
+  - id: claude-code-app-key
+    holder: claude-code
     kind: github-app-private-key
-    owner: TBD
-    secrets_manager_location: TBD
-    last_rotated: TBD
-    rotation_date: TBD
-    alert_date: TBD
-  - id: coding-agent-tbd-model-key
-    holder: coding-agent-tbd
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/claude-code-app-key
+    last_rotated: 2026-11-11    # created with the App
+    rotation_date: 2027-02-09   # last_rotated + rotation_days
+    alert_date: 2027-01-26      # alert_days_before the rotation
+  - id: claude-code-webhook-secret
+    holder: claude-code
+    kind: webhook-secret
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/claude-code-webhook-secret
+    last_rotated: 2026-11-11    # created with the App
+    rotation_date: 2027-02-09
+    alert_date: 2027-01-26
+  - id: claude-code-model-key
+    holder: claude-code
     kind: model-api-key
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/claude-code-model-key
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
   - id: app-service-webhook-secret
     holder: app-service
     kind: webhook-secret
-    owner: TBD
-    secrets_manager_location: TBD
+    owner: "@Yimunan"
+    secrets_manager_location: op://agents/app-service-webhook-secret
     last_rotated: TBD
     rotation_date: TBD
     alert_date: TBD
