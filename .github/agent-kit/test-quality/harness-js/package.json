@@ -1,0 +1,9 @@
+{
+  "name": "test-quality-harness-js",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Exact-version Jest used by the test-quality gates",
+  "dependencies": {
+    "jest": "30.5.2"
+  }
+}

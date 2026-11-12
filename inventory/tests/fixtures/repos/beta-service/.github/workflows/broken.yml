@@ -1,0 +1,9 @@
+name: Broken
+on: push
+jobs:
+  bad:
+	runs-on: ubuntu-latest
+    steps:
+      - run: gemini -p "hello"
+        env:
+          KEY: ${{ secrets.GEMINI_API_KEY }}

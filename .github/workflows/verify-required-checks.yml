@@ -1,0 +1,39 @@
+# Required check `required-checks-verified` (ticket P2.9).
+#
+# GitHub counts skipped and neutral results as passing a required check, so this
+# job waits for the others and accepts only success from each pinned app. It
+# runs from the base branch, reads check runs, and runs nothing from the PR.
+name: verify-required-checks
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  verify:
+    name: required-checks-verified
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      checks: read
+    steps:
+      - name: Check out base-branch scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Verify every required check succeeded
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: >-
+          python3 .trusted/.github/agent-kit/integrity/scripts/verify_required_checks.py
+          --ruleset .trusted/.github/agent-kit/integrity/rulesets/required-checks-pinned.json
+          --repo "$GITHUB_REPOSITORY" --sha "$HEAD_SHA" --wait 2100
+          --exclude required-checks-verified

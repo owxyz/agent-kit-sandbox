@@ -1,0 +1,4 @@
+# Exact versions of the harness tools. Install these after the project dependencies.
+coverage==7.10.7
+pytest==8.4.2
+pytest-randomly==4.0.1

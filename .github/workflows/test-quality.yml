@@ -1,0 +1,161 @@
+# Required check `test-quality` (tickets P2.3, P2.4, P2.11).
+#
+# PR code runs here, so this uses pull_request, never pull_request_target. The harness comes from
+# the base commit and the PR-code job has only contents: read, no secrets, and no checks permission.
+# Editing this file in a PR is stopped only by P2.1 and P2.9; see the README.
+name: test-quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+  merge_group:
+
+permissions: {}
+
+env:
+  HARNESS: .trusted/.github/agent-kit/test-quality
+
+jobs:
+  context:
+    name: context
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      agent_pr: ${{ steps.context.outputs.agent_pr }}
+      bug_fix: ${{ steps.context.outputs.bug_fix }}
+      owner_approved: ${{ steps.context.outputs.owner_approved }}
+      base_sha: ${{ steps.context.outputs.base_sha }}
+      head_sha: ${{ steps.context.outputs.head_sha }}
+    steps:
+      - name: Check out the base-branch harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Read PR facts
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AGENT_BOT_LOGINS: ${{ vars.AGENT_BOT_LOGINS }}
+          TEST_QUALITY_OWNERS: ${{ vars.TEST_QUALITY_OWNERS }}
+        run: >-
+          python3 "$HARNESS/scripts/pr_context.py"
+          --event "$GITHUB_EVENT_PATH"
+          --kit-scripts .trusted/.github/agent-kit/scripts
+          --agent-logins "$AGENT_BOT_LOGINS"
+          --owners "$TEST_QUALITY_OWNERS"
+          --github-output "$GITHUB_OUTPUT"
+
+  check:
+    name: ${{ matrix.gate }}
+    needs: context
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Runs PR code. contents: read is the only scope, and there must never be a checks scope here.
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [coverage, repeat-runs, fail-before-pass-after, blocking-suite, quarantine-suite]
+    steps:
+      - name: Check out the base-branch harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.context.outputs.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Check out the PR head with history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.context.outputs.head_sha }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      # Wheels only and --ignore-scripts, so installing dependencies runs no PR code.
+      # Project dependencies go in first so the harness versions win. REPLACE per repo if needed.
+      - name: Install project dependencies and harness tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/tq-venv"
+          if [ -f pr/requirements.txt ]; then
+            "$RUNNER_TEMP/tq-venv/bin/pip" install --only-binary=:all: -r pr/requirements.txt
+          fi
+          "$RUNNER_TEMP/tq-venv/bin/pip" install --only-binary=:all: -r "$HARNESS/requirements-harness.txt"
+          if [ -f pr/package-lock.json ]; then
+            npm ci --ignore-scripts --prefix pr
+          fi
+          cp -R "$HARNESS/harness-js" "$RUNNER_TEMP/tq-jest"
+          npm ci --ignore-scripts --prefix "$RUNNER_TEMP/tq-jest"
+
+      - name: Run the gate on PR code, with no token or secrets in the environment
+        env:
+          GATE: ${{ matrix.gate }}
+          BASE_SHA: ${{ needs.context.outputs.base_sha }}
+          HEAD_SHA: ${{ needs.context.outputs.head_sha }}
+          AGENT_PR: ${{ needs.context.outputs.agent_pr }}
+          BUG_FIX: ${{ needs.context.outputs.bug_fix }}
+          OWNER_APPROVED: ${{ needs.context.outputs.owner_approved }}
+        run: |
+          case "$GATE" in
+            coverage) script=coverage_gate.py; extra=() ;;
+            repeat-runs) script=repeat_runs_gate.py; extra=() ;;
+            fail-before-pass-after) script=fail_before_pass_after.py; extra=(--bug-fix "$BUG_FIX") ;;
+            blocking-suite) script=suite_gate.py; extra=(--suite blocking --quarantine "$HARNESS/config/quarantine.json") ;;
+            quarantine-suite) script=suite_gate.py; extra=(--suite quarantine --quarantine "$HARNESS/config/quarantine.json") ;;
+            *) echo "unknown gate $GATE"; exit 2 ;;
+          esac
+          python3 "$HARNESS/scripts/$script" --repo pr \
+            --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" \
+            --agent-pr "$AGENT_PR" --owner-approved "$OWNER_APPROVED" \
+            --python "$RUNNER_TEMP/tq-venv/bin/python" \
+            --jest-bin "$RUNNER_TEMP/tq-jest/node_modules/jest/bin/jest.js" \
+            --out "$RUNNER_TEMP/findings/$GATE.json" "${extra[@]}"
+
+      - name: Save findings for the failure classifier
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-quality-findings-${{ matrix.gate }}
+          path: ${{ runner.temp }}/findings/
+          if-no-files-found: warn
+
+  test-quality:
+    name: test-quality
+    needs: [context, check]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Only a success result passes
+        env:
+          EVENT: ${{ github.event_name }}
+          CONTEXT_RESULT: ${{ needs.context.result }}
+          CHECK_RESULT: ${{ needs.check.result }}
+        run: |
+          if [ "$EVENT" = merge_group ]; then
+            echo "The test-quality gate ran on the pull request."
+            exit 0
+          fi
+          echo "context=$CONTEXT_RESULT check=$CHECK_RESULT"
+          [ "$CONTEXT_RESULT" = success ] && [ "$CHECK_RESULT" = success ]

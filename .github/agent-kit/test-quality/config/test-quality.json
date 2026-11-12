@@ -1,0 +1,14 @@
+{
+  "branch_threshold_percent": 80,
+  "repeat_runs": 10,
+  "round_timeout_seconds": 900,
+  "ignore_globs": ["*/migrations/*", "migrations/*", "*.d.ts", "*/generated/*", "generated/*"],
+  "pytest_plugins": [],
+  "flake": {
+    "runs_per_commit": 5,
+    "window_commits": 20,
+    "threshold": 0.02,
+    "min_runs": 20,
+    "quarantine_days": 30
+  }
+}
