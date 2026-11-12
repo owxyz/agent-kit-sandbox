@@ -1,0 +1,27 @@
+# FORGED-CHECK PROOF (P2.10, P2.9), 2026-11-12. Never merged.
+# Posts a passing `heldout-tests` check run and commit status with GITHUB_TOKEN,
+# the way any workflow on a PR branch could. The required check is pinned to
+# owxyz-heldout-status (5725673), so GitHub must ignore both.
+name: forge-heldout-proof
+
+on: pull_request
+
+permissions: {}
+
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      statuses: write
+    steps:
+      - name: Post a forged heldout-tests check run and commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/check-runs" \
+            -f name=heldout-tests -f head_sha="$SHA" -f status=completed -f conclusion=success \
+            -f 'output[title]=FORGED' -f 'output[summary]=Posted with GITHUB_TOKEN for the pin proof'
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state=success -f context=heldout-tests -f description="FORGED for the pin proof"
