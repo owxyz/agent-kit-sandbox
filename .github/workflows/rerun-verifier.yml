@@ -1,0 +1,37 @@
+# Re-runs `required-checks-verified` after a review fixes `test-quality` (P2.9).
+#
+# A pull_request_review trigger on the verifier would run YAML the PR controls.
+# workflow_run always uses the default branch's copy of this file, and this job
+# runs nothing from the PR. It only asks GitHub to re-run a failed verifier.
+name: rerun-verifier
+
+on:
+  workflow_run:
+    workflows: [test-quality]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  rerun:
+    name: rerun-verifier
+    if: >-
+      github.event.workflow_run.event == 'pull_request_review' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Re-run the verifier if it failed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/verify-required-checks.yml/runs?head_sha=$HEAD_SHA&per_page=1" \
+            --jq '.workflow_runs[0] | "\(.id) \(.status) \(.conclusion)"')"
+          read -r run_id status conclusion <<< "$latest"
+          echo "Verifier run: ${run_id:-none} ${status:-} ${conclusion:-}"
+          if [ "$status" = completed ] && [ "$conclusion" = failure ]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/rerun-failed-jobs"
+          fi
