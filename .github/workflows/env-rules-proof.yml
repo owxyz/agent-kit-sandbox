@@ -1,0 +1,43 @@
+# ENVIRONMENT-RULES PROOF (P2.10), 2026-11-12. Never merged.
+# A workflow added on a PR branch tries to enter each held-out environment and
+# read its secret. Each environment allows deployments from main only, so
+# GitHub must refuse every job before any step runs. The steps only report
+# whether a value is present, and never print it.
+name: env-rules-proof
+
+on: pull_request
+
+permissions: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    environment: heldout-fetch
+    steps:
+      - name: Report whether the secrets are visible
+        env:
+          A: ${{ secrets.HELDOUT_APP_PRIVATE_KEY }}
+          T: ${{ secrets.HELDOUT_TRANSPORT_KEY }}
+        run: |
+          if [ -n "$A$T" ]; then echo "LEAK: heldout-fetch secrets visible"; exit 1; fi
+          echo "no secrets visible"
+  run:
+    runs-on: ubuntu-latest
+    environment: heldout-run
+    steps:
+      - name: Report whether the secret is visible
+        env:
+          T: ${{ secrets.HELDOUT_TRANSPORT_KEY }}
+        run: |
+          if [ -n "$T" ]; then echo "LEAK: heldout-run secret visible"; exit 1; fi
+          echo "no secret visible"
+  report:
+    runs-on: ubuntu-latest
+    environment: heldout-report
+    steps:
+      - name: Report whether the secret is visible
+        env:
+          S: ${{ secrets.HELDOUT_STATUS_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$S" ]; then echo "LEAK: heldout-report secret visible"; exit 1; fi
+          echo "no secret visible"
