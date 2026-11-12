@@ -128,13 +128,21 @@ jobs:
                   source = ASSOCIATION_SOURCE.get(event_name)
                   if source is None:
                       raise Refused("write_access", "event has no trusted author: " + event_name)
-                  association = (event.get(source) or {}).get("author_association")
-                  if association not in WRITE_ASSOCIATIONS:
-                      raise Refused("write_access", "author_association not allowed: %s" % association)
+                  content = event.get(source) or {}
+                  association = content.get("author_association")
+                  if association is None:
+                      raise Refused("write_access", "event has no author_association")
+                  # Private org members appear as CONTRIBUTOR or NONE, so a
+                  # non-writer association defers to the permission lookup. That
+                  # applies only to the actor's own content: a writer must not
+                  # start an agent on text an outsider wrote.
+                  author = (content.get("user") or {}).get("login", "")
+                  if association not in WRITE_ASSOCIATIONS and author.lower() != actor.lower():
+                      raise Refused("write_access", "content author lacks write association: %s" % association)
               elif event_name not in ASSOCIATION_SOURCE and event_name != "workflow_dispatch":
                   raise Refused("write_access", "event has no trusted author: " + event_name)
-              # author_association alone is not enough: MEMBER and COLLABORATOR
-              # can both be read-only, so confirm the actual permission.
+              # author_association is not proof either way: MEMBER and COLLABORATOR
+              # can be read-only, so the actual permission always decides.
               path = "/repos/%s/collaborators/%s/permission" % (repo, urllib.parse.quote(actor))
               try:
                   permission = api(path).get("permission")
