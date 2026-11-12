@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OVERRIDE PROOF (P2.7), 2026-11-12. A deliberately committed fake test report, so
+     tamper-check's report-artifact-committed rule blocks and the owner can override it.
+     It is removed again in the follow-up PR. CI never reads it. -->
+<testsuites tests="1" failures="0">
+  <testsuite name="override-proof" tests="1" failures="0">
+    <testcase classname="proof" name="fake_report_for_override_proof"/>
+  </testsuite>
+</testsuites>
