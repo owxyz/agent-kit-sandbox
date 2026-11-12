@@ -29,6 +29,15 @@
       "queue": "pr-head"
     },
     {
+      "context": "heldout-tests",
+      "kind": "check_run",
+      "integration_id": 5725673,
+      "dedicated_app": true,
+      "workflow": "heldout-tests.yml",
+      "owner": "gates/critical/",
+      "queue": "merge"
+    },
+    {
       "context": "check-integrity",
       "kind": "check_run",
       "integration_id": 15368,
@@ -44,5 +53,18 @@
     }
   ],
   "status_writers": [],
-  "reviewed_exceptions": []
+  "reviewed_exceptions": [
+    {
+      "rule": "CACHE002",
+      "workflow": "heldout-tests.yml",
+      "job": "snapshot",
+      "why": "Checks out the PR only to run git archive; never executes it."
+    },
+    {
+      "rule": "CACHE002",
+      "workflow": "heldout-tests.yml",
+      "job": "run",
+      "why": "PR code runs only inside gates/critical's container, which gets no runner token, so it cannot authenticate to the cache service. Its install stage does have network access."
+    }
+  ]
 }
