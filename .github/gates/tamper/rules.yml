@@ -68,7 +68,7 @@ rules:
 
   # Check bypass, and fake completion
   ci-workflow-changed:         {mode: warn, intended: block, category: check-bypass}
-  report-artifact-committed:   {mode: warn, intended: block, category: fake-completion}
+  report-artifact-committed:   {mode: block, intended: block, category: fake-completion}  # TEMPORARY: override proof, 2026-11-12; reverted after
 
   # Not in the catalogue: flags input the engine could not fully read.
   unscannable-input:           {mode: warn, intended: block, category: engine-safety}
