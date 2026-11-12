@@ -1,0 +1,148 @@
+# Required check `tamper-check` (tickets P2.2, P2.7).
+#
+# Uses pull_request_target on purpose: this YAML and the rules come from the
+# base branch, so a PR cannot edit its own check or reach the audit secrets. The
+# PR is never checked out. Its files arrive through the API as data, and nothing
+# from it runs. Install this file at .github/workflows/ and the gate at
+# .github/gates/tamper/.
+#
+# On merge_group GitHub reads this YAML from the merge commit, so owner review
+# of workflow files (P2.1) must hold before the queue is trusted. The rules still
+# come from the base commit.
+#
+# Owner overrides need gates/integrity/ installed and run only when a rule
+# blocks. Vars: GATE_AUDIT_REPO, AGENT_BOT_LOGINS. Secrets: AUDIT_REPO_TOKEN,
+# AUDIT_REPO_READ_TOKEN, OVERRIDE_TEAM_TOKEN.
+name: tamper-check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  tamper-check:
+    name: tamper-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Check out base-branch rules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Classify the PR from live data
+        id: class
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          AGENT_BOT_LOGINS: ${{ vars.AGENT_BOT_LOGINS }}
+        run: |
+          set -uo pipefail
+          # Any lookup failure leaves the fail-closed class, `agent`.
+          class=agent
+          number="$PR_NUMBER"
+          if [ -z "$number" ]; then
+            number="$(printf '%s' "$QUEUE_REF" | sed -nE 's#^refs/heads/gh-readonly-queue/.+/pr-([0-9]+)-[0-9a-f]+$#\1#p')"
+          fi
+          data="$RUNNER_TEMP/pr-data"
+          mkdir -p "$data"
+          if [[ "$number" =~ ^[0-9]+$ ]] \
+            && gh api "repos/$GITHUB_REPOSITORY/pulls/$number" > "$data/pr.json" \
+            && gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$number/commits?per_page=100" > "$data/commits.json" \
+            && gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$number/events?per_page=100" > "$data/events.json"; then
+            result="$(python3 .trusted/.github/gates/tamper/classify_pr.py \
+              --pr "$data/pr.json" --commits "$data/commits.json" --events "$data/events.json" \
+              --agent-logins "$AGENT_BOT_LOGINS")"
+            if [ "$result" = "human" ]; then
+              class=human
+            fi
+          fi
+          echo "class=$class" >> "$GITHUB_OUTPUT"
+
+      - name: Install rule dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -r .trusted/.github/gates/tamper/requirements.txt
+
+      - name: Run tamper rules over the diff
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          PR_CLASS: ${{ steps.class.outputs.class }}
+        run: |
+          range_args=()
+          if [ "$EVENT_NAME" != "merge_group" ]; then
+            # The base tip can be ahead of the branch point.
+            range_args=(--merge-base)
+          fi
+          gate_exit=0
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/gates/tamper/tamper_check.py \
+            --config .trusted/.github/gates/tamper/rules.yml \
+            --api-repo "$GITHUB_REPOSITORY" --base "$BASE_SHA" --head "$HEAD_SHA" "${range_args[@]}" \
+            --pr-class "$PR_CLASS" \
+            --output "$RUNNER_TEMP/tamper-findings.json" \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --annotate || gate_exit=$?
+          echo "exit=$gate_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Fail on a tool error
+        if: steps.gate.outputs.exit != '0' && steps.gate.outputs.exit != '1'
+        run: exit 2
+
+      - name: Apply any owner override
+        if: steps.gate.outputs.exit == '1' && github.event_name == 'pull_request_target'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GATE_EXIT: ${{ steps.gate.outputs.exit }}
+          AUDIT_REPO: ${{ vars.GATE_AUDIT_REPO }}
+          AGENT_BOT_LOGINS: ${{ vars.AGENT_BOT_LOGINS }}
+          AUDIT_REPO_TOKEN: ${{ secrets.AUDIT_REPO_TOKEN }}
+          OVERRIDE_TEAM_TOKEN: ${{ secrets.OVERRIDE_TEAM_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/integrity/scripts/apply_override.py
+          --gate tamper --findings "$RUNNER_TEMP/tamper-findings.json" --gate-exit "$GATE_EXIT"
+          --codeowners .trusted/.github/CODEOWNERS --repo "$GITHUB_REPOSITORY"
+          --pr "$PR_NUMBER" --sha "$HEAD_SHA" --audit-repo "$AUDIT_REPO"
+          --run-url "$RUN_URL" --output "$RUNNER_TEMP/tamper-decision.json"
+
+      # The queue reads the audit log with a read-only token, and logs nothing.
+      - name: Honor overrides already audited on the PR
+        if: steps.gate.outputs.exit == '1' && github.event_name == 'merge_group'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          GATE_EXIT: ${{ steps.gate.outputs.exit }}
+          AUDIT_REPO: ${{ vars.GATE_AUDIT_REPO }}
+          AUDIT_REPO_TOKEN: ${{ secrets.AUDIT_REPO_READ_TOKEN }}
+        run: >-
+          "$RUNNER_TEMP/venv/bin/python" .trusted/.github/agent-kit/integrity/scripts/apply_queue_override.py
+          --gate tamper --findings "$RUNNER_TEMP/tamper-findings.json" --gate-exit "$GATE_EXIT"
+          --repo "$GITHUB_REPOSITORY" --queue-ref "$QUEUE_REF" --audit-repo "$AUDIT_REPO"
+          --output "$RUNNER_TEMP/tamper-decision.json"
+
+      - name: Upload findings for the verdict ledger
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tamper-findings
+          path: |
+            ${{ runner.temp }}/tamper-findings.json
+            ${{ runner.temp }}/tamper-decision.json
+          if-no-files-found: error
+          retention-days: 30
