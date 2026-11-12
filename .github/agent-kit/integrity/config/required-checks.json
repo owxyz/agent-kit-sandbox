@@ -1,0 +1,48 @@
+{
+  "checks": [
+    {
+      "context": "provenance",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "kit/",
+      "queue": "pr-head"
+    },
+    {
+      "context": "workflow-lint",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "kit/",
+      "queue": "merge"
+    },
+    {
+      "context": "tamper-check",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "gates/tamper/",
+      "queue": "merge"
+    },
+    {
+      "context": "test-quality",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "gates/test-quality/",
+      "queue": "pr-head"
+    },
+    {
+      "context": "check-integrity",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "gates/integrity/",
+      "queue": "merge"
+    },
+    {
+      "context": "required-checks-verified",
+      "kind": "check_run",
+      "integration_id": 15368,
+      "owner": "gates/integrity/",
+      "queue": "merge"
+    }
+  ],
+  "status_writers": [],
+  "reviewed_exceptions": []
+}
