@@ -1,0 +1,74 @@
+# Tamper-check rule modes (ticket P2.2).
+#
+# Every rule starts in `warn`. To make a rule blocking, change its `mode` to
+# `block` in a reviewed PR, once `tamper_ledger.py report` shows `meets-bar`.
+# `intended` records the catalogue's final mode:
+#   block             the catalogue marks the pattern Block
+#   warn-then-review  the catalogue says "Warn, then review"
+#   warn-over-budget  the catalogue says warn when over budget
+#
+# The engine refuses to run if this file omits a rule or names an unknown one.
+version: 1
+
+budgets:
+  # PLACEHOLDER: the plan says "a small budget" without a number. Set it from
+  # pilot data.
+  suppressions: 3
+
+limits:
+  # A diff over these limits is a tool error (exit 2), never a pass.
+  max_diff_bytes: 52428800
+  max_files: 20000
+  # Each changed file costs up to two API calls, and a workflow token gets about
+  # 1,000 calls an hour. PLACEHOLDER until pilots show typical PR sizes.
+  max_api_files: 300
+  max_line_chars: 4096
+
+promotion:
+  # Plan: "under 5% of flagged PRs judged harmless".
+  false_positive_bar: 0.05
+  # PLACEHOLDER: fewest judged PRs before a rate counts. With fewer than 21, a
+  # single false positive already puts a rule at or over 5%.
+  min_judged_prs: 20
+
+rules:
+  # Test and fixture edits
+  test-skipped:                {mode: warn, intended: block, category: test-and-fixture-edits}
+  test-deleted:                {mode: warn, intended: block, category: test-and-fixture-edits}
+  test-count-drop:             {mode: warn, intended: block, category: test-and-fixture-edits}
+  assertion-weakened:          {mode: warn, intended: block, category: test-and-fixture-edits}
+  expected-value-changed:      {mode: warn, intended: block, category: test-and-fixture-edits}
+  fixture-or-snapshot-changed: {mode: warn, intended: block, category: test-and-fixture-edits}
+  xfail-added:                 {mode: warn, intended: block, category: test-and-fixture-edits}
+  timeout-raised:              {mode: warn, intended: block, category: test-and-fixture-edits}
+  retry-added:                 {mode: warn, intended: block, category: test-and-fixture-edits}
+
+  # Error swallowing and over-mocking
+  broad-exception-handler:     {mode: warn, intended: warn-then-review, category: error-swallowing-and-over-mocking}
+  mock-replaces-changed-code:  {mode: warn, intended: warn-then-review, category: error-swallowing-and-over-mocking}
+
+  # Comparison tampering
+  equality-always-true:        {mode: warn, intended: warn-then-review, category: comparison-tampering}
+  equality-override-new:       {mode: warn, intended: warn-then-review, category: comparison-tampering}
+  module-level-mutable-state:  {mode: warn, intended: warn-then-review, category: comparison-tampering}
+
+  # Harness and runtime tampering
+  harness-file-changed:        {mode: warn, intended: block, category: harness-and-runtime-tampering}
+  test-function-patched:       {mode: warn, intended: block, category: harness-and-runtime-tampering}
+  early-exit:                  {mode: warn, intended: block, category: harness-and-runtime-tampering}
+  timer-override:              {mode: warn, intended: block, category: harness-and-runtime-tampering}
+  runner-config-excludes:      {mode: warn, intended: block, category: harness-and-runtime-tampering}
+
+  # Quality-gate suppression. The catalogue says "warn over budget; block
+  # config changes". P2.3 requires owner approval for new exclusion comments,
+  # and the catalogue gives no mode for them, so `block` is our reading.
+  suppression-budget:          {mode: warn, intended: warn-over-budget, category: quality-gate-suppression}
+  threshold-lowered:           {mode: warn, intended: block, category: quality-gate-suppression}
+  coverage-exclusion:          {mode: warn, intended: block, category: quality-gate-suppression}
+
+  # Check bypass, and fake completion
+  ci-workflow-changed:         {mode: warn, intended: block, category: check-bypass}
+  report-artifact-committed:   {mode: warn, intended: block, category: fake-completion}
+
+  # Not in the catalogue: flags input the engine could not fully read.
+  unscannable-input:           {mode: warn, intended: block, category: engine-safety}
