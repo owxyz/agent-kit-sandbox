@@ -192,7 +192,13 @@ def validate_register(document, today, report):
         _check_secret(secret, policy, today, "$.secrets[{}]".format(index), report)
 
     required = {agent["id"]: ("github-app-private-key", "model-api-key") for agent in agents}
+    external = set()
     for holder in holders:
+        if holder["type"] == "external-agent":
+            # Run by its vendor through the vendor's own GitHub integration: owxyz holds none of its keys.
+            external.add(holder["id"])
+            required[holder["id"]] = ()
+            continue
         required[holder["id"]] = (
             ("webhook-secret",) if holder["type"] == "app-service"
             else ("github-app-private-key", "model-api-key")
@@ -203,6 +209,10 @@ def validate_register(document, today, report):
             report.add("error", "$.secrets[{}].holder".format(index),
                        "unknown holder '{}'".format(secret["holder"]))
         held.add((secret["holder"], secret["kind"]))
+        if secret["holder"] in external:
+            report.add("error", "$.secrets[{}].holder".format(index),
+                       "'{}' is an external agent, so owxyz should hold none of its keys; "
+                       "if a key is held here, register it as a coding-agent".format(secret["holder"]))
     for holder, kinds in required.items():
         for kind in kinds:
             if (holder, kind) not in held:

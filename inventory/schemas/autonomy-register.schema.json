@@ -184,7 +184,8 @@
             "type": "string",
             "enum": [
               "coding-agent",
-              "app-service"
+              "app-service",
+              "external-agent"
             ]
           },
           "description": {

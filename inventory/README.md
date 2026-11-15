@@ -13,6 +13,9 @@ Everything runs offline on Python 3.9 or later with the standard library only.
 | `manual-credentials.template.yaml` | Template for credentials a scan cannot see |
 | `autonomy-register.yaml` | The register, prefilled with the plan's starting levels |
 | `validate.py` | Validates the register and the manual inventory |
+| `check_agents.py` | Fails a PR that adds an agent to a workflow when the register doesn't list it (R2.6) |
+| `pilot_copy.py` | Installs the register and its checker on a repo that uses agents, or checks that copy for drift |
+| `templates/agent-register-check.yml` | The PR check that runs `check_agents.py` on such a repo |
 | `schemas/` | JSON Schemas for both files |
 | `CODEOWNERS.example` | Lines that put the register under code-owner approval |
 | `yamlite.py`, `schemalite.py` | Internal YAML reader and schema checker |
@@ -158,6 +161,8 @@ Rules beyond the schema:
 - No agent holds admin or workflow scope (P0.2).
 - An Advise agent may write checks and nothing else.
 - Every agent has a GitHub App key and a model key entry, and the app service has a webhook secret entry.
+
+**Owners and rotation dates (R1.9).** Every key's owner is `@Yimunan`, owxyz's only maintainer. A key is dated when it's created. Only the `claude-code` App key and webhook secret exist so far, so the other keys stay `TBD`, at `op://` placeholder locations.
 - A secret's location cannot be CI secrets or variables.
 - `rotation_date` is at most `rotation_days` after `last_rotated` (default 90), and `alert_date` falls before it.
 - A rotation within `due_soon_days` (default 14) or past its alert date is reported as due soon.
@@ -194,6 +199,24 @@ Code owners approve every change. To enforce that, copy `CODEOWNERS.example` int
 **Rotation alerts.** `templates/register-check.yml` opens one issue per secret when it comes due, and another if it goes overdue. Write `owner` as `@user` or `@org/team` so the issue notifies them.
 
 **Retiring an agent.** Uninstall its app, revoke its keys, and remove its entries in the same PR.
+
+**External agents.** An agent run by its vendor through the vendor's own GitHub integration, such as Cursor's cloud agents (`cursor-agent`) or Claude Code on the web (`claude-code-web`), goes under `other_secret_holders` with `type: external-agent`. owxyz holds none of its keys, so it needs no `secrets` entries, and the validator reports an error if one names it as a holder. It's outside the runtime sandbox and the P4.8 eval gate, because its model changes without a release here. A key held here makes it a `coding-agent` instead.
+
+### Agent register check on repos that use agents (R2.6)
+
+The register lives here, and this repo is private. A repo that uses agents keeps a copy at `.github/agent-kit/inventory/`, and `templates/agent-register-check.yml` checks each PR that touches its workflows:
+
+1. It reads the register and scripts from the base branch, and the PR's test merge commit as data.
+2. `scan_workflows.py` lists the agents in the PR's workflows and in the base branch's, as it is now.
+3. An agent the PR adds to a workflow, and that the register doesn't list by id, fails the check. Agents already on the base branch are listed in the summary but don't fail it, so one unregistered workflow doesn't hold every later PR.
+
+It sees agents that run in workflows: actions such as `anthropics/claude-code-action` and CLIs such as `codex exec` or `cursor-agent`. External agents that work through their vendor's GitHub App never appear in a workflow, so it can't see them. Register those by hand.
+
+**Installing it on a repo** takes two PRs, merged in order. First, run `python3 inventory/pilot_copy.py <target>` from a checkout of the target and merge just the copy. Then add `templates/agent-register-check.yml` as `.github/workflows/agent-register-check.yml`. The check runs the checker from the base branch, never the PR's copy, so a PR that adds both at once can't check itself and fails with `validate.py: No such file`. Splitting them also means the check really runs on the second PR.
+
+**Updating the copy.** From a checkout of the target repo, run `python3 inventory/pilot_copy.py <target>` and commit the result. To register a new agent, change the master register here first, then update the copy on the target before the PR that adds the agent. `python3 inventory/pilot_copy.py <target> --check` exits 1 if the copy has drifted. Run it after any register change.
+
+**On the pilot (2026-11-14).** `owxyz/aicode-agent` PR 213 merged the copy (e064492d) and PR 214 the workflow (aa0c375e); the check passed on PR 214. Two proof PRs, both closed: PR 215 added `openai/codex-action` and failed, naming `codex`; PR 216 added `anthropics/claude-code-action` and passed. The pilot's two existing model clients (`explorer-eval.yml`, `routing-nightly.yml`) show as unregistered but don't fail the check.
 
 ## Needs a real org
 
