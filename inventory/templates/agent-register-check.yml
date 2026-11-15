@@ -1,0 +1,63 @@
+# Agent register check (R2.6, P0.13). Install it on a repo that uses agents in two PRs, in this order:
+#   1. `python3 inventory/pilot_copy.py <repo>`: the register and its checker at
+#      .github/agent-kit/inventory/, and nothing else. Merge it.
+#   2. This file, as .github/workflows/agent-register-check.yml.
+# The check runs the checker from the base branch, never the PR's copy. A PR that adds both at once
+# can't check itself and fails with "validate.py: No such file".
+#
+# It fails a PR that adds an agent to a workflow when the autonomy register doesn't list it. The
+# register and the scripts come from the base branch; the PR's workflows are read as data and nothing
+# from the PR runs. The comparison base is the test merge commit's first parent, the base branch as
+# it is now, so agents merged to the base since the PR was opened don't count as this PR's.
+#
+# The paths filter means it doesn't report on other PRs. Before making it a required check, drop the
+# filter, or GitHub will wait forever for it on PRs that don't touch these paths.
+name: agent-register-check
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/agent-kit/inventory/**"
+
+permissions: {}
+
+jobs:
+  agent-register-check:
+    name: agent-register-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the base-branch register and checker
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .trusted
+          persist-credentials: false
+
+      - name: Check out the PR's test merge commit as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pr
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Export the base branch's workflows as data
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/base"
+          base=$(git -C pr rev-parse --verify HEAD^1)
+          if [ -n "$(git -C pr ls-tree -d "$base" .github/workflows)" ]; then
+            git -C pr archive "$base" .github/workflows | tar -x -C "$RUNNER_TEMP/base"
+          fi
+
+      - name: Validate the register
+        run: python3 .trusted/.github/agent-kit/inventory/validate.py register .trusted/.github/agent-kit/inventory/autonomy-register.yaml --allow-incomplete
+
+      - name: Fail on agents the PR adds without registering them
+        run: >-
+          python3 .trusted/.github/agent-kit/inventory/check_agents.py
+          --register .trusted/.github/agent-kit/inventory/autonomy-register.yaml
+          --base "$RUNNER_TEMP/base" --head pr --summary "$GITHUB_STEP_SUMMARY"

@@ -95,7 +95,7 @@ other_secret_holders:
     description: >-
       Claude Code (P0.2), the coding agent. It runs in the runtime sandbox as the
       owxyz-coding-agent GitHub App (id 5709045), installed on
-      owxyz/agent-kit-sandbox only, with contents and pull_requests write. Its PRs
+      owxyz/agent-kit-sandbox and the pilot repo, with contents and pull_requests write. Its PRs
       carry the agent:claude-code label. Its CLI version and model are one pair in
       runtime/sandbox/agent-pair.json, gated by the P4.8 eval gate under this id.
       The App's webhook secret is unused, because its webhook is inactive. Where
@@ -104,7 +104,31 @@ other_secret_holders:
   - id: app-service
     type: app-service
     description: The GitHub App service that runs the advisory agents and receives GitHub event notifications.
+  # External agents run by their vendor, outside the runtime sandbox and the P4.8 eval gate.
+  # owxyz holds none of their keys, and their models change without a release here.
+  - id: cursor-agent
+    type: external-agent
+    description: >-
+      Cursor's cloud agents, run by Cursor through its GitHub integration. On the
+      pilot repo they work on cursor/** branches, commit as "Cursor Agent" or
+      cursor[bot], and their PRs are opened under the maintainer's account. The
+      pilot lists cursoragent in AGENT_BOT_LOGINS, and the agent-branch ruleset
+      lets them write only cursor/**, agent/** and claude/** branches. Registered
+      2026-11-14 (R2.6). Scopes, owner and promotion metric are TBD.
+  - id: claude-code-web
+    type: external-agent
+    description: >-
+      Claude Code on the web, Anthropic's hosted sessions, run through Anthropic's
+      GitHub integration. Distinct from claude-code above, which runs in the
+      runtime sandbox as owxyz-coding-agent. On the pilot repo it works on
+      claude/** branches and its PRs are opened under the maintainer's account.
+      Registered 2026-11-14 (R2.6). Scopes, owner and promotion metric are TBD.
 
+# Owners and rotation dates (R1.9, 2026-11-15). Every key's owner is @Yimunan, owxyz's only
+# maintainer and the agent-kit-reviewers team. A key gets its last_rotated, rotation_date and
+# alert_date when it's created: only the claude-code App key and webhook secret exist so far, so
+# those are the only dated keys. The other keys' Apps and model keys don't exist yet (R0.4, R0.5),
+# and their op:// locations are placeholders until the key store is chosen (R0.6).
 secrets:
   - id: diagnosis-app-key
     holder: diagnosis
