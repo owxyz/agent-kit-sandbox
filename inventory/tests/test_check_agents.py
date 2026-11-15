@@ -104,6 +104,22 @@ class CheckAgents(Repos):
         code, _ = self.run_check({}, {"codex.yml": CODEX}, register=broken)
         self.assertEqual(code, 2)
 
+    def test_register_without_a_section_is_a_tool_error(self):
+        broken = os.path.join(self.tmp, "no-agents.yaml")
+        with open(broken, "w") as handle:
+            handle.write("schema_version: 1\nother_secret_holders: []\n")
+        code, _ = self.run_check({}, {"codex.yml": CODEX}, register=broken)
+        self.assertEqual(code, 2)
+
+    def test_summary_file_gets_the_report(self):
+        summary = os.path.join(self.tmp, "summary.md")
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = check_agents.main(["--register", REGISTER, "--base", self.repo("base", {}),
+                                      "--head", self.repo("head", {"codex.yml": CODEX}), "--summary", summary])
+        self.assertEqual(code, 1)
+        with open(summary) as handle:
+            self.assertIn("`codex` in `.github/workflows/codex.yml`", handle.read())
+
     def test_unparsable_workflow_is_still_scanned(self):
         code, out = self.run_check({}, {"bad.yml": CODEX + "  : [\n"})
         self.assertEqual(code, 1, out)
@@ -174,6 +190,14 @@ class PilotCopy(Repos):
         self.assertEqual(code, 1)
         self.assertIn("missing: check_agents.py", out)
         self.assertIn("extra: local.py", out)
+
+    def test_unwritable_target_is_a_tool_error(self):
+        target = self.target()
+        os.makedirs(os.path.join(target, ".github", "agent-kit"))
+        with open(os.path.join(target, pilot_copy.DEST), "w") as handle:
+            handle.write("a file where the copy's folder should be\n")
+        code, _ = self.quiet(target)
+        self.assertEqual(code, 2)
 
     def test_target_must_be_a_git_checkout(self):
         self.assertEqual(self.quiet(self.tmp)[0], 2)
