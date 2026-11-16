@@ -15,6 +15,7 @@ def clamp(value, low, high):
     """Return value limited to [low, high]; raise ValueError if low > high.
 
     Example: clamp(15, 0, 10) == 10
+    Example: clamp(-1, 0, 10) == 0
     """
     if low > high:
         raise ValueError(f"low ({low}) must not be greater than high ({high})")
