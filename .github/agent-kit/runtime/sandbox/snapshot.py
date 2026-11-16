@@ -127,7 +127,9 @@ def take(github, scope):
         pr = github.get("/repos/{}/pulls/{}".format(repo, number))
         head = pr.get("head") or {}
         head_repo = (head.get("repo") or {}).get("full_name") or ""
-        if head_repo.lower() != repo.lower() or not str(head.get("ref", "")).startswith(scope["branch_prefix"]):
+        ref = str(head.get("ref", ""))
+        if (head_repo.lower() != repo.lower() or not ref.startswith(scope["branch_prefix"])
+                or (scope.get("branch") and ref != scope["branch"])):
             raise SnapshotError("PR {} is not the agent's own: its head is not under {} in {}".format(
                 number, scope["branch_prefix"], repo))
         reviews = github.pages("/repos/{}/pulls/{}/reviews".format(repo, number))

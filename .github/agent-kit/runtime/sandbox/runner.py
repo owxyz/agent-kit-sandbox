@@ -279,7 +279,7 @@ def run_task(args):
     scope = None
     if args.issue is not None or args.pr is not None:
         try:
-            scope = gateway_module.task_scope(args.agent, issue=args.issue, pr=args.pr)
+            scope = gateway_module.task_scope(args.agent, issue=args.issue, pr=args.pr, branch=args.branch)
         except ValueError as exc:
             raise SandboxError(str(exc))
     github_token = read_secret(args.github_token_file)
@@ -351,6 +351,7 @@ def main(argv=None):
     parser.add_argument("--repo", help="owner/name the GitHub token is limited to")
     parser.add_argument("--issue", type=int, help="Triggering issue number (gateway task scope)")
     parser.add_argument("--pr", type=int, help="The agent's own PR, on a re-dispatch (gateway task scope)")
+    parser.add_argument("--branch", help="The one branch the task may push and open its PR from (GA-18)")
     parser.add_argument("--allow-mention", action="append", default=[], metavar="LOGIN",
                         help="A login or org/team the agent may @mention; repeat for more")
     parser.add_argument("--link-host", action="append", default=[], metavar="HOST",

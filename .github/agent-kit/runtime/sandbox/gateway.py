@@ -40,6 +40,8 @@ UPSTREAM_TIMEOUT = 600
 AGENT_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,38}$")
 BRANCH_PREFIX = re.compile(r"^agent/[a-z0-9][a-z0-9-]{0,38}/$")
 SCOPE_KEYS = {"issue", "pr", "branch_prefix"}
+# GA-18: the one branch a task may push and open its PR from, when the runner sets it.
+OPTIONAL_SCOPE_KEYS = {"branch"}
 # GitHub API writes a scoped task may make (GA-09), relative to /repos/<owner>/<name>.
 NUMBER = r"([1-9][0-9]{0,9})"
 WRITE_RULES = [
@@ -83,23 +85,29 @@ HTML_URL_ATTR = re.compile(
 BARE_URL = re.compile(r"(?i)\b(https?)://([^\s<>\"'()\[\]]+)|(?<![\w.-])(www\.[^\s<>\"'()\[\]]+)")
 
 
-def task_scope(agent, issue=None, pr=None):
+def task_scope(agent, issue=None, pr=None, branch=None):
     """What one task may write to (G1.1): its issue, its own PR, its branch prefix.
 
     `issue` is the triggering issue. `pr` is the agent's own PR when it already
     exists at dispatch (a re-dispatch on that PR); for a new task it is None
     until the agent opens one. The branch prefix comes from the agent name, set
-    by the trusted caller, never by the agent.
+    by the trusted caller, never by the agent. `branch`, if given, narrows that
+    to one branch under the prefix (GA-18): the new task's branch, or on a
+    re-dispatch the PR's own branch.
     """
     if not isinstance(agent, str) or not AGENT_NAME.match(agent):
         raise ValueError("agent must match " + AGENT_NAME.pattern + ": " + repr(agent))
-    return check_scope({"issue": issue, "pr": pr, "branch_prefix": "agent/" + agent + "/"})
+    scope = {"issue": issue, "pr": pr, "branch_prefix": "agent/" + agent + "/"}
+    if branch is not None:
+        scope["branch"] = branch
+    return check_scope(scope)
 
 
 def check_scope(scope):
     """Return the scope if it is well formed, otherwise raise ValueError."""
-    if not isinstance(scope, dict) or set(scope) != SCOPE_KEYS:
-        raise ValueError("task scope must have exactly " + ", ".join(sorted(SCOPE_KEYS)))
+    if not isinstance(scope, dict) or not SCOPE_KEYS <= set(scope) <= SCOPE_KEYS | OPTIONAL_SCOPE_KEYS:
+        raise ValueError("task scope must have exactly " + ", ".join(sorted(SCOPE_KEYS))
+                         + ", and optionally " + ", ".join(sorted(OPTIONAL_SCOPE_KEYS)))
     for name in ("issue", "pr"):
         number = scope[name]
         if number is not None and (type(number) is not int or number < 1):
@@ -109,6 +117,10 @@ def check_scope(scope):
     prefix = scope["branch_prefix"]
     if not isinstance(prefix, str) or not BRANCH_PREFIX.match(prefix):
         raise ValueError("branch prefix must be agent/<agent>/: " + repr(prefix))
+    branch = scope.get("branch")
+    if branch is not None and (not isinstance(branch, str) or check_head(branch, "x/y", prefix)
+                               or len(branch) > 200 or branch.endswith((".", ".lock")) or "/." in branch):
+        raise ValueError("branch must be a clean name under " + prefix + ": " + repr(branch))
     return dict(scope)
 
 
@@ -250,6 +262,8 @@ def write_allowed(route, scope, pr, method, path, body):
         if pr is not None:
             return "task-already-has-pr", kind
         why = check_head(fields.get("head"), route["repo"], scope["branch_prefix"])
+        if not why and scope.get("branch") and fields["head"].rpartition(":")[2] != scope["branch"]:
+            why = "head-not-task-branch"
         if why:
             return why, kind
         allowed = OPEN_PR_KEYS
@@ -397,6 +411,8 @@ def push_allowed(scope, commands):
             return "ref-delete:" + ref[:200]
         if not ref.startswith(prefix):
             return "ref-outside-prefix:" + ref[:200]
+        if scope.get("branch") and ref != "refs/heads/" + scope["branch"]:
+            return "ref-not-task-branch:" + ref[:200]
         branch = ref[len("refs/heads/"):]
         if (len(ref) == len(prefix) or ".." in branch or "//" in branch or branch.endswith(("/", ".", ".lock"))
                 or "/." in branch or "@{" in branch or re.search(r"[\x00-\x20\x7f~^:?*\[\\]", branch)):
@@ -866,6 +882,10 @@ def make_proxy_handler(route, state):
             if not why:
                 fields = json_object(body)
                 why, cleaned, stripped = check_content(fields, body, state.leak_forms, state.content)
+                if not why and kind == "open-pr" and cleaned.get("draft") is not True:
+                    # GA-18: an agent PR is always a draft; PATCH can't change it back.
+                    cleaned = dict(cleaned, draft=True)
+                    stripped = dict(stripped or {}, forced_draft=1)
                 if not why and cleaned != fields:
                     body = json.dumps(cleaned, ensure_ascii=False).encode("utf-8")
             if not why and kind == "open-pr":
