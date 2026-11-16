@@ -211,6 +211,26 @@ jobs:
           python3 "$KIT/sandbox/agent_task.py" result --ledger "$RUNNER_TEMP/flag-ledger.jsonl" \
             --task-id "$TASK_ID" >> "$GITHUB_OUTPUT"
 
+      # GA-19: the runner, not the agent, fills the P1.4 disclosure and adds the agent label,
+      # on every run, so the provenance check passes with no human edits.
+      - name: Fill the PR's disclosure and agent label
+        if: always() && steps.result.outputs.pr != ''
+        env:
+          PR: ${{ steps.result.outputs.pr }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          GH_TOKEN=$(cat "$RUNNER_TEMP/gh-token")
+          export GH_TOKEN
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" > "$RUNNER_TEMP/pr.json"
+          python3 "$KIT/sandbox/agent_task.py" disclosure --pr-json "$RUNNER_TEMP/pr.json" \
+            --agent "$AGENT_NAME" --model "$(python3 "$KIT/sandbox/agent_pair.py" model)" \
+            --prompt-version "agent-claude-code.yml@${WORKFLOW_SHA:0:12}" \
+            --session-log "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > "$RUNNER_TEMP/pr-body.md"
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/pulls/$PR" -F "body=@$RUNNER_TEMP/pr-body.md" --silent
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" -f "labels[]=agent:$AGENT_NAME" --silent
+
       - name: Post flags on the agent's PR
         id: flag
         if: always() && steps.result.outputs.flags != '' && steps.result.outputs.flags != '0'
