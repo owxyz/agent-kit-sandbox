@@ -14,7 +14,7 @@ def abs_diff(a, b):
 def sign(x):
     """Return 1 if x is positive, -1 if x is negative, and 0 if x is zero.
 
-    Example: sign(-3) == -1
+    Examples: sign(-3) == -1, sign(0.5) == 1
     """
     if x > 0:
         return 1
