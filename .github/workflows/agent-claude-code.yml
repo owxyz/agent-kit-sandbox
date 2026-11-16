@@ -164,7 +164,9 @@ jobs:
           IN_PR: ${{ inputs.pr }}
           BRANCH: ${{ steps.task.outputs.branch }}
         run: |
-          set -uo pipefail
+          # Steps run under bash -e: without set +e, exit 3 (flagged) would end the
+          # step before its code is recorded, and the flag would never be posted.
+          set +e -uo pipefail
           AGENT_MODEL=$(python3 "$KIT/sandbox/agent_pair.py" model)
           echo '{"allow": []}' > "$RUNNER_TEMP/allowlist.json"
           scope=()
