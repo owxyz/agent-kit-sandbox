@@ -8,6 +8,7 @@ Usage:
   agent_task.py mcp-config --config-dir DIR
   agent_task.py result --ledger FILE --task-id ID
   agent_task.py check-commits --commits-json FILE --name NAME --email EMAIL
+  agent_task.py disclosure --pr-json FILE --agent NAME --model M --prompt-version V --session-log URL
 
 `task` writes /task/task.md: a fixed preamble that says where the repository and
 the snapshot are, the rules for this mode, and then the maintainer's task text.
@@ -18,7 +19,8 @@ refuses any server while the approved list is empty. `result` reads the
 runner's ledger record for the task and prints `pr=` and `flags=` lines.
 `branch-name` makes a new task's branch, agent/<agent>/<run-id>-<slug> (GA-18).
 `check-commits` refuses a PR any of whose commits isn't authored and committed
-by the bot's name and noreply address (GA-18).
+by the bot's name and noreply address (GA-18). `disclosure` prints the PR body
+with the runner's P1.4 disclosure first and any the agent wrote removed (GA-19).
 
 All of these run on the runner, outside the container, and never print tokens.
 """
@@ -105,6 +107,40 @@ def check_commits(commits, name, email):
                 bad.append(str(commit.get("sha", ""))[:12])
                 break
     return bad
+
+
+DISCLOSURE_HEADING = re.compile(r"^#{1,6}[ \t]*agent disclosure[ \t]*#*[ \t]*$", re.I | re.M)
+ANY_HEADING = re.compile(r"^#{1,6}[ \t]+\S", re.M)
+# The provenance check reads the first line that looks like a field, so the
+# agent's own field lines are quoted out of reach, wherever they are.
+FIELD_LINE = re.compile(r"^([ \t]*[-*]?[ \t]*\**[ \t]*(agent used|model|prompt version|session log|local agent)"
+                        r"[ \t]*\**[ \t]*:)", re.I | re.M)
+MARK = "<!-- disclosure filled by the agent runner (GA-19); edits here are replaced on the next run -->"
+
+
+def disclosure(body, agent, model, prompt_version, session_log):
+    """The PR body with the runner's disclosure first and the agent's own taken out."""
+    for name, value in (("agent", agent), ("model", model), ("prompt version", prompt_version)):
+        if not value or "\n" in value or len(value) > 200:
+            raise TaskError(name + " must be one short line")
+    if not re.match(r"^https://[^\s]{1,300}$", session_log or ""):
+        raise TaskError("session log must be an https link")
+    text = (body or "").replace("\r\n", "\n")
+    if text.startswith(MARK):
+        # A re-dispatch: drop the runner's previous block, up to the agent's text.
+        text = text.split("\n<!-- end of runner disclosure -->\n", 1)[-1]
+    match = DISCLOSURE_HEADING.search(text)
+    while match:
+        following = ANY_HEADING.search(text, match.end())
+        text = text[:match.start()] + (text[following.start():] if following else "")
+        match = DISCLOSURE_HEADING.search(text)
+    text = FIELD_LINE.sub(lambda m: "> (agent wrote) " + m.group(1).strip(), text).strip()
+    block = "\n".join([
+        MARK, "## Agent disclosure", "",
+        "Agent used: " + agent, "Model: " + model, "Prompt version: " + prompt_version,
+        "Session log: " + session_log, "Local agent: no", "", "<!-- end of runner disclosure -->", "",
+    ])
+    return block + text + "\n"
 
 
 def compose(repo, issue=None, pr=None, branch=None, task="", note=""):
@@ -229,6 +265,12 @@ def main(argv=None):
     commits.add_argument("--commits-json", required=True)
     commits.add_argument("--name", required=True)
     commits.add_argument("--email", required=True)
+    disc = sub.add_parser("disclosure")
+    disc.add_argument("--pr-json", required=True)
+    disc.add_argument("--agent", required=True)
+    disc.add_argument("--model", required=True)
+    disc.add_argument("--prompt-version", required=True)
+    disc.add_argument("--session-log", required=True)
     res = sub.add_parser("result")
     res.add_argument("--ledger", required=True)
     res.add_argument("--task-id", required=True)
@@ -255,6 +297,11 @@ def main(argv=None):
             if bad:
                 raise TaskError("commits not by {} <{}>: {}".format(args.name, args.email, ", ".join(bad)))
             print("all commits by " + args.name)
+        elif args.command == "disclosure":
+            with open(args.pr_json, encoding="utf-8") as handle:
+                pr = json.load(handle)
+            sys.stdout.write(disclosure(pr.get("body"), args.agent, args.model, args.prompt_version,
+                                        args.session_log))
         elif args.command == "mcp-config":
             print(json.dumps(mcp_config(args.config_dir), separators=(",", ":")))
         else:
