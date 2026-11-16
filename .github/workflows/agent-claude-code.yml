@@ -75,6 +75,9 @@ jobs:
       AGENT_NAME: claude-code
       TASK_ID: run-${{ github.run_id }}-${{ github.run_attempt }}
       MAX_TURNS: "80"
+      # GA-18: every agent commit carries the App's bot identity.
+      BOT_NAME: owxyz-coding-agent[bot]
+      BOT_EMAIL: 355238002+owxyz-coding-agent[bot]@users.noreply.github.com
     steps:
       - name: Check out the default branch only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -107,12 +110,17 @@ jobs:
           else
             [[ "$IN_ISSUE" =~ ^[1-9][0-9]{0,9}$ ]] || { echo "::error::a new task needs an issue number"; exit 1; }
             [ -n "$IN_TASK" ] || { echo "::error::a new task needs task text"; exit 1; }
+            # GA-18: the runner names the branch, agent/claude-code/<run-id>-<slug of the issue title>.
+            title=$(gh api "repos/$GITHUB_REPOSITORY/issues/$IN_ISSUE" --jq .title)
+            branch=$(python3 "$KIT/sandbox/agent_task.py" branch-name --agent "$AGENT_NAME" \
+              --run-id "$GITHUB_RUN_ID" --title "$title")
           fi
           python3 "$KIT/sandbox/agent_task.py" task --repo "$GITHUB_REPOSITORY" --agent "$AGENT_NAME" \
             --issue "$IN_ISSUE" --pr "$IN_PR" --branch "$branch" \
             --task-file "$RUNNER_TEMP/task/request.txt" --note-file "$RUNNER_TEMP/task/note.txt" \
             --out "$RUNNER_TEMP/task/task.md"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "mode=$([ -n "$IN_PR" ] && echo pr || echo new)" >> "$GITHUB_OUTPUT"
 
       - name: Load the MCP config from the base commit
         run: |
@@ -163,6 +171,7 @@ jobs:
           IN_ISSUE: ${{ inputs.issue }}
           IN_PR: ${{ inputs.pr }}
           BRANCH: ${{ steps.task.outputs.branch }}
+          MODE: ${{ steps.task.outputs.mode }}
         run: |
           # Steps run under bash -e: without set +e, exit 3 (flagged) would end the
           # step before its code is recorded, and the flag would never be posted.
@@ -177,18 +186,18 @@ jobs:
           script='set -e
           git clone -q "https://github.com/$1" /workspace/repo
           cd /workspace/repo
-          git config user.name "owxyz-coding-agent[bot]"
-          git config user.email "355238002+owxyz-coding-agent[bot]@users.noreply.github.com"
-          [ -z "$2" ] || git switch -q "$2"
+          git config user.name "$7"
+          git config user.email "$8"
+          if [ "$6" = new ]; then git switch -q -c "$2"; else git switch -q "$2"; fi
           exec claude -p "$(cat /task/task.md)" --model "$3" --max-turns "$4" \
             --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config "$5"'
           python3 "$KIT/sandbox/runner.py" --task-id "$TASK_ID" --agent "$AGENT_NAME" \
             --image "$AGENT_IMAGE" --allowlist "$RUNNER_TEMP/allowlist.json" \
-            --repo "$GITHUB_REPOSITORY" "${scope[@]}" --task-file "$RUNNER_TEMP/task/task.md" \
+            --repo "$GITHUB_REPOSITORY" "${scope[@]}" --branch "$BRANCH" --task-file "$RUNNER_TEMP/task/task.md" \
             --model-key-file "$RUNNER_TEMP/model-key" --github-token-file "$RUNNER_TEMP/gh-token" \
             --ledger "$RUNNER_TEMP/flag-ledger.jsonl" --memory 4g --cpus 2 --timeout 3000 \
             -- sh -c "$script" agent "$GITHUB_REPOSITORY" "$BRANCH" "$AGENT_MODEL" "$MAX_TURNS" \
-            "$(cat "$RUNNER_TEMP/task/mcp.json")"
+            "$(cat "$RUNNER_TEMP/task/mcp.json")" "$MODE" "$BOT_NAME" "$BOT_EMAIL"
           code=$?
           rm -f "$RUNNER_TEMP/model-key"
           echo "code=$code" >> "$GITHUB_OUTPUT"
@@ -219,6 +228,17 @@ jobs:
           GH_TOKEN=$(cat "$RUNNER_TEMP/gh-token") gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
             -F "body=@$RUNNER_TEMP/flag.md" --silent
           echo "target=pr" >> "$GITHUB_OUTPUT"
+
+      - name: Check every commit on the PR is the bot's
+        if: always() && steps.result.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.result.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/commits?per_page=100" > "$RUNNER_TEMP/commits.json"
+          python3 "$KIT/sandbox/agent_task.py" check-commits --commits-json "$RUNNER_TEMP/commits.json" \
+            --name "$BOT_NAME" --email "$BOT_EMAIL"
 
       - name: Revoke the token
         if: always()
