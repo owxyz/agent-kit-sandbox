@@ -10,15 +10,8 @@ updates:
     labels:
       - dependencies
 
-  # Exact-version agent CLIs, plugins and MCP servers. Keep them in this
-  # manifest, because Dependabot cannot update versions inside `run:` steps.
-  - package-ecosystem: npm
-    directory: /.github/agent-tools
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
-    labels:
-      - dependencies
+  # The coding agent's CLI is in its runtime image, not a manifest here. Its exact
+  # version is watched in owxyz/ci-cd-for-coding-agents (runtime/sandbox/docker/agent-cli/, R1.3).
 
   - package-ecosystem: pip
     directory: /.github/agent-kit
