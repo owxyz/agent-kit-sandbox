@@ -202,6 +202,16 @@ Code owners approve every change. To enforce that, copy `CODEOWNERS.example` int
 
 **External agents.** An agent run by its vendor through the vendor's own GitHub integration, such as Cursor's cloud agents (`cursor-agent`) or Claude Code on the web (`claude-code-web`), goes under `other_secret_holders` with `type: external-agent`. owxyz holds none of its keys, so it needs no `secrets` entries, and the validator reports an error if one names it as a holder. It's outside the runtime sandbox and the P4.8 eval gate, because its model changes without a release here. A key held here makes it a `coding-agent` instead.
 
+### Amendments (GA-03's stop-gap)
+
+P0.13 says every agent key lives in a secrets manager, so `validate.py` rejects a `secrets_manager_location` that is a CI secret or variable, including a GitHub environment secret. The one way past that rule is an entry under `amendments:` that names the secrets it `covers`, says what the stop-gap is, the risk accepted and what replaces it, and is signed (`signed_by`, `signed_on`).
+
+- An unsigned amendment covers nothing, so its secrets stay errors.
+- It lasts at most `policy.rotation_days` (90) from `signed_on`. It is reported as due soon in its last `due_soon_days`, and once `expires` passes it is overdue and covers nothing, so the register fails until it is re-signed or replaced.
+- A `covers` id that isn't a secret in the register is an error.
+
+The project's private register holds the amendments in force. This public copy leaves them out and keeps placeholder `op://` locations, so it doesn't say where any key is held.
+
 ### Agent register check on repos that use agents (R2.6)
 
 The register lives here, and this repo is private. A repo that uses agents keeps a copy at `.github/agent-kit/inventory/`, and `templates/agent-register-check.yml` checks each PR that touches its workflows:

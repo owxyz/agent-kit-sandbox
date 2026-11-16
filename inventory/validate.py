@@ -37,7 +37,8 @@ _CREDENTIAL_SHAPES = re.compile(
     r"|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY"
 )
 _CI_LOCATION = re.compile(
-    r"\$\{\{|^(secrets|vars)\.|github[ _-]?actions|actions[ _-](secret|variable)|ci[ _-](variable|secret)",
+    r"\$\{\{|^(secrets|vars)\.|github[ _-]?actions|actions[ _-](secret|variable)|ci[ _-](variable|secret)"
+    r"|github[ _-]?env|environment[ _-](secret|variable)",
     re.I,
 )
 
@@ -125,12 +126,13 @@ def _check_agent(agent, path, report):
         _require_known(metric, field, "{}.promotion_metric".format(path), report)
 
 
-def _check_secret(secret, policy, today, path, report):
+def _check_secret(secret, policy, today, path, report, amended=frozenset()):
     _require_known(secret, "owner", path, report)
     if _require_known(secret, "secrets_manager_location", path, report):
-        if _CI_LOCATION.search(secret["secrets_manager_location"]):
+        if _CI_LOCATION.search(secret["secrets_manager_location"]) and secret["id"] not in amended:
             report.add("error", "{}.secrets_manager_location".format(path),
-                       "must be a secrets manager, not CI secrets or variables (P0.13)")
+                       "must be a secrets manager, not CI secrets or variables (P0.13), "
+                       "unless a signed amendment covers it")
     interval = secret.get("rotation_days", policy["rotation_days"])
     last = parse_date(secret["last_rotated"], "{}.last_rotated".format(path), report)
     rotation = parse_date(secret["rotation_date"], "{}.rotation_date".format(path), report)
@@ -168,6 +170,48 @@ def _check_secret(secret, policy, today, path, report):
             report.add("due_soon", "{}.alert_date".format(path), "alert date has passed", **who)
 
 
+def _check_amendments(amendments, secret_ids, policy, today, report):
+    """GA-03's stop-gap: return the secret ids a signed, unexpired amendment covers.
+
+    An amendment counts only once someone has signed it, and for at most
+    rotation_days from the signing date, so it has to be re-signed or replaced.
+    An unsigned or expired amendment covers nothing.
+    """
+    _unique_ids(amendments, "$.amendments", report)
+    amended = set()
+    for index, amendment in enumerate(amendments):
+        path = "$.amendments[{}]".format(index)
+        for position, secret_id in enumerate(amendment["covers"]):
+            if secret_id not in secret_ids:
+                report.add("error", "{}.covers[{}]".format(path, position),
+                           "no secret with id '{}'".format(secret_id))
+        signed_by = _require_known(amendment, "signed_by", path, report)
+        signed_on = parse_date(amendment["signed_on"], "{}.signed_on".format(path), report)
+        if is_tbd(amendment["signed_on"]):
+            report.add("incomplete", "{}.signed_on".format(path), "is TBD; unsigned, so it covers nothing")
+        expires = parse_date(amendment["expires"], "{}.expires".format(path), report)
+        if not (signed_by and signed_on and expires):
+            continue
+        if signed_on > today:
+            report.add("error", "{}.signed_on".format(path), "is in the future")
+            continue
+        if expires > signed_on + timedelta(days=policy["rotation_days"]):
+            report.add("error", "{}.expires".format(path),
+                       "is more than {} days after signed_on".format(policy["rotation_days"]))
+            continue
+        days_left = (expires - today).days
+        who = {"subject": amendment["id"], "owner": _display_owner(amendment["signed_by"])}
+        if days_left < 0:
+            report.add("overdue", "{}.expires".format(path),
+                       "amendment expired {} day(s) ago; it covers nothing".format(-days_left), **who)
+            continue
+        if days_left <= policy["due_soon_days"]:
+            report.add("due_soon", "{}.expires".format(path),
+                       "amendment expires in {} day(s)".format(days_left), **who)
+        amended.update(amendment["covers"])
+    return amended
+
+
 def _display_owner(owner):
     """The owner on one line, withheld if a credential was typed there."""
     if _CREDENTIAL_SHAPES.search(owner):
@@ -188,8 +232,10 @@ def validate_register(document, today, report):
 
     for index, agent in enumerate(agents):
         _check_agent(agent, "$.agents[{}]".format(index), report)
+    amended = _check_amendments(document.get("amendments", []), {s["id"] for s in secrets},
+                                policy, today, report)
     for index, secret in enumerate(secrets):
-        _check_secret(secret, policy, today, "$.secrets[{}]".format(index), report)
+        _check_secret(secret, policy, today, "$.secrets[{}]".format(index), report, amended)
 
     required = {agent["id"]: ("github-app-private-key", "model-api-key") for agent in agents}
     external = set()

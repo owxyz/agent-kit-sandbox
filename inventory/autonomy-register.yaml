@@ -247,9 +247,9 @@ secrets:
     kind: model-api-key
     owner: "@Yimunan"
     secrets_manager_location: op://agents/claude-code-model-key
-    last_rotated: TBD
-    rotation_date: TBD
-    alert_date: TBD
+    last_rotated: 2026-11-15    # created for GA-01
+    rotation_date: 2027-02-13
+    alert_date: 2027-01-30
   - id: app-service-webhook-secret
     holder: app-service
     kind: webhook-secret

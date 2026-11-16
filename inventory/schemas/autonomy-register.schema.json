@@ -246,6 +246,59 @@
           }
         }
       }
+    },
+    "amendments": {
+      "description": "Signed, time-limited exceptions to the register's rules (GA-03's stop-gap). A secret held in CI is an error unless a signed amendment that hasn't expired covers it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "covers",
+          "tickets",
+          "stop_gap",
+          "risk_accepted",
+          "replaced_by",
+          "signed_by",
+          "signed_on",
+          "expires"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "covers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "tickets": {
+            "$ref": "#/$defs/text"
+          },
+          "stop_gap": {
+            "$ref": "#/$defs/text"
+          },
+          "risk_accepted": {
+            "$ref": "#/$defs/text"
+          },
+          "replaced_by": {
+            "$ref": "#/$defs/text"
+          },
+          "signed_by": {
+            "$ref": "#/$defs/text"
+          },
+          "signed_on": {
+            "$ref": "#/$defs/date_or_tbd"
+          },
+          "expires": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
     }
   }
 }
