@@ -132,7 +132,7 @@ class ExternalAgents(unittest.TestCase):
 
     def check(self, document):
         report = validate.Report()
-        validate.validate_register(document, date(2026, 11, 14), report)
+        validate.validate_register(document, date(2026, 11, 16), report)  # after the amendment's signing
         return [issue["message"] for issue in report.issues if issue["category"] == "error"]
 
     def test_cursor_and_claude_web_are_registered_as_external(self):

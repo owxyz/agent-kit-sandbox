@@ -35,6 +35,8 @@ def complete_register():
     for secret in document["secrets"]:
         secret.update(owner="platform-team", secrets_manager_location="vault:kv/agents/" + secret["id"],
                       last_rotated="2026-10-01", rotation_date="2026-12-30", alert_date="2026-12-16")
+    for amendment in document.get("amendments", []):
+        amendment.update(signed_by="platform-team", signed_on="2026-11-01", expires="2027-01-30")
     return document
 
 
@@ -72,7 +74,8 @@ class RegisterContentTests(unittest.TestCase):
         self.assertEqual(load(REGISTER)["policy"]["rotation_days"], 90)
 
     def test_shipped_register_is_valid_but_incomplete(self):
-        report = validate.validate_document("register", load(REGISTER), TODAY)
+        # A day after the stop-gap amendment was signed (2026-11-15): TODAY is earlier than that.
+        report = validate.validate_document("register", load(REGISTER), date(2026, 11, 16))
         self.assertEqual(categories(report), {"incomplete"})
         self.assertEqual(report.exit_code(), 3)
         self.assertEqual(report.exit_code(allow_incomplete=True), 0)
@@ -159,7 +162,8 @@ class RegisterRuleTests(unittest.TestCase):
         self.assertTrue(any("2026-12-30" in message for message in messages), messages)
 
     def test_ci_location_rejected(self):
-        for location in ("secrets.AGENT_KEY", "GitHub Actions secret", "${{ secrets.X }}", "CI variable"):
+        for location in ("secrets.AGENT_KEY", "GitHub Actions secret", "${{ secrets.X }}", "CI variable",
+                         "GitHub environment secret AGENT_API_KEY", "github-env://owner/repo/env/KEY"):
             document = complete_register()
             document["secrets"][0]["secrets_manager_location"] = location
             self.assertIn("$.secrets[0].secrets_manager_location", paths(self.check(document), "error"), location)
@@ -337,3 +341,79 @@ class SchemaliteTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AmendmentTests(unittest.TestCase):
+    """GA-03's stop-gap: a CI-held secret passes only under a signed, unexpired amendment."""
+
+    def check(self, document, today=TODAY):
+        return validate.validate_document("register", document, today)
+
+    def document(self, **amendment):
+        document = complete_register()
+        target = document["secrets"][0]
+        target["secrets_manager_location"] = "GitHub environment secret AGENT_API_KEY"
+        entry = {
+            "id": "stop-gap", "covers": [target["id"]], "tickets": "GA-03", "stop_gap": "env secret",
+            "risk_accepted": "key on a runner", "replaced_by": "token vending",
+            "signed_by": "platform-team", "signed_on": "2026-11-01", "expires": "2027-01-30",
+        }
+        entry.update(amendment)
+        document["amendments"] = [entry]
+        return document
+
+    def location_errors(self, report):
+        return [p for p in paths(report, "error") if p.endswith("secrets_manager_location")]
+
+    def test_signed_amendment_allows_the_ci_location(self):
+        report = self.check(self.document())
+        self.assertEqual(self.location_errors(report), [])
+        self.assertEqual(report.exit_code(), 0)
+
+    def test_unsigned_amendment_covers_nothing(self):
+        for field in ("signed_by", "signed_on"):
+            with self.subTest(field=field):
+                report = self.check(self.document(**{field: "TBD"}))
+                self.assertEqual(self.location_errors(report), ["$.secrets[0].secrets_manager_location"])
+                self.assertIn("$.amendments[0].{}".format(field), paths(report, "incomplete"))
+                self.assertEqual(report.exit_code(), 1)
+
+    def test_expired_amendment_is_overdue_and_covers_nothing(self):
+        report = self.check(self.document(), today=date(2027, 2, 1))
+        self.assertIn("$.amendments[0].expires", paths(report, "overdue"))
+        self.assertEqual(self.location_errors(report), ["$.secrets[0].secrets_manager_location"])
+
+    def test_expiry_soon_is_reported(self):
+        report = self.check(self.document(), today=date(2027, 1, 25))
+        self.assertIn("$.amendments[0].expires", paths(report, "due_soon"))
+        self.assertEqual(self.location_errors(report), [])
+
+    def test_expiry_beyond_rotation_days_is_rejected(self):
+        report = self.check(self.document(expires="2027-02-01"))
+        self.assertIn("$.amendments[0].expires", paths(report, "error"))
+        self.assertEqual(self.location_errors(report), ["$.secrets[0].secrets_manager_location"])
+
+    def test_future_signature_is_rejected(self):
+        report = self.check(self.document(signed_on="2026-11-09"))
+        self.assertIn("$.amendments[0].signed_on", paths(report, "error"))
+
+    def test_unknown_secret_is_an_error(self):
+        report = self.check(self.document(covers=["no-such-key"]))
+        self.assertIn("$.amendments[0].covers[0]", paths(report, "error"))
+        self.assertEqual(self.location_errors(report), ["$.secrets[0].secrets_manager_location"])
+
+    def test_amendment_covers_only_its_own_secrets(self):
+        document = self.document()
+        document["secrets"][1]["secrets_manager_location"] = "GitHub environment secret OTHER"
+        self.assertEqual(self.location_errors(self.check(document)), ["$.secrets[1].secrets_manager_location"])
+
+    def test_expires_is_required_and_dated(self):
+        report = self.check(self.document(expires="TBD"))
+        self.assertTrue(paths(report, "error"))
+
+    def test_real_register_amendment_covers_only_existing_secrets(self):
+        document = load(REGISTER)
+        ids = {secret["id"] for secret in document["secrets"]}
+        for amendment in document.get("amendments", []):
+            self.assertTrue(set(amendment["covers"]) <= ids, amendment["id"])
+
