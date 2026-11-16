@@ -327,8 +327,10 @@ def run_in_sandbox(args, allowlist, scope, github_token, task_dir, started, left
         opened = sandbox.opened_pr()
         calls, usage = sandbox.model_usage()
         gateway_errors, gateway_denied = sandbox.gateway_problems()
+        gateway_log, proxy_log = sandbox.gateway_events(), sandbox.proxy_events()
     final = EXIT_FLAGGED if flags else code
-    sys.stdout.write(output)
+    if not args.artifacts_dir:
+        sys.stdout.write(output)
     summary = {
         "task_id": args.task_id, "agent": args.agent, "repo": args.repo, "exit_code": final,
         "issue": args.issue, "pr": args.pr if args.pr is not None else opened,
@@ -337,9 +339,31 @@ def run_in_sandbox(args, allowlist, scope, github_token, task_dir, started, left
         "gateway_errors": gateway_errors, "gateway_denied": gateway_denied,
     }
     print("SANDBOX_RESULT " + json.dumps(summary, sort_keys=True))
+    if args.artifacts_dir:
+        write_artifacts(args.artifacts_dir, output, gateway_log, proxy_log, summary)
     if args.ledger:
         flag_ledger.append_task(args.ledger, summary, flags, model_calls=calls)
     return final
+
+
+def write_artifacts(folder, output, gateway_log, proxy_log, summary):
+    """GA-20: the task's records as files, for the workflow to redact and keep.
+
+    session.raw.log is the agent's unredacted output and must be redacted, then
+    deleted, before anything is uploaded. The others hold the gateway's and
+    proxy's own decision lines and the summary.
+    """
+    os.makedirs(folder, mode=0o700, exist_ok=True)
+    files = {
+        "session.raw.log": output,
+        "gateway.jsonl": "".join(json.dumps(e, sort_keys=True) + "\n" for e in gateway_log),
+        "proxy.jsonl": "".join(json.dumps(e, sort_keys=True) + "\n" for e in proxy_log),
+        "summary.json": json.dumps(summary, indent=1, sort_keys=True) + "\n",
+    }
+    for name, text in files.items():
+        descriptor = os.open(os.path.join(folder, name), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
 
 
 def main(argv=None):
@@ -352,6 +376,9 @@ def main(argv=None):
     parser.add_argument("--issue", type=int, help="Triggering issue number (gateway task scope)")
     parser.add_argument("--pr", type=int, help="The agent's own PR, on a re-dispatch (gateway task scope)")
     parser.add_argument("--branch", help="The one branch the task may push and open its PR from (GA-18)")
+    parser.add_argument("--artifacts-dir",
+                        help="Write the session, gateway and proxy logs and the summary here instead of "
+                             "printing the session (GA-20); the session log there is unredacted")
     parser.add_argument("--allow-mention", action="append", default=[], metavar="LOGIN",
                         help="A login or org/team the agent may @mention; repeat for more")
     parser.add_argument("--link-host", action="append", default=[], metavar="HOST",
