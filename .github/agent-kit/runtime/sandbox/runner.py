@@ -233,6 +233,21 @@ class Sandbox:
         totals["unread_calls"] = sum(1 for call in calls if call.get("unread"))
         return calls, totals
 
+    def gateway_problems(self):
+        """Counts of upstream errors (route:exception type) and refusals (by reason).
+
+        Only the gateway's own labels, never request text, so they're safe to print.
+        """
+        errors, denied = {}, {}
+        for event in self.gateway_events():
+            if event.get("event") == "gateway-error":
+                key = "{}:{}".format(event.get("route"), event.get("error"))
+                errors[key] = errors.get(key, 0) + 1
+            elif event.get("decision") == "deny":
+                key = str(event.get("reason"))
+                denied[key] = denied.get(key, 0) + 1
+        return errors, denied
+
     def denied_egress(self):
         return [e for e in self.proxy_events() if e.get("decision") == "deny"]
 
@@ -311,6 +326,7 @@ def run_in_sandbox(args, allowlist, scope, github_token, task_dir, started, left
         denied = sandbox.denied_egress()
         opened = sandbox.opened_pr()
         calls, usage = sandbox.model_usage()
+        gateway_errors, gateway_denied = sandbox.gateway_problems()
     final = EXIT_FLAGGED if flags else code
     sys.stdout.write(output)
     summary = {
@@ -318,6 +334,7 @@ def run_in_sandbox(args, allowlist, scope, github_token, task_dir, started, left
         "issue": args.issue, "pr": args.pr if args.pr is not None else opened,
         "agent_exit_code": code, "flags": len(flags), "denied_egress": len(denied),
         "seconds": round(time.time() - started, 1), "usage": usage, "snapshot_left_out": left_out,
+        "gateway_errors": gateway_errors, "gateway_denied": gateway_denied,
     }
     print("SANDBOX_RESULT " + json.dumps(summary, sort_keys=True))
     if args.ledger:
