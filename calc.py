@@ -12,7 +12,10 @@ def abs_diff(a, b):
 
 
 def clamp(value, low, high):
-    """Return value limited to [low, high]; raise ValueError if low > high."""
+    """Return value limited to [low, high]; raise ValueError if low > high.
+
+    Example: clamp(15, 0, 10) == 10
+    """
     if low > high:
         raise ValueError(f"low ({low}) must not be greater than high ({high})")
     return max(low, min(value, high))
