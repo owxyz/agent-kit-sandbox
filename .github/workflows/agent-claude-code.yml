@@ -190,18 +190,33 @@ jobs:
           git config user.email "$8"
           if [ "$6" = new ]; then git switch -q -c "$2"; else git switch -q "$2"; fi
           exec claude -p "$(cat /task/task.md)" --model "$3" --max-turns "$4" \
-            --output-format json --dangerously-skip-permissions --strict-mcp-config --mcp-config "$5"'
+            --output-format stream-json --verbose --dangerously-skip-permissions --strict-mcp-config --mcp-config "$5"'
           python3 "$KIT/sandbox/runner.py" --task-id "$TASK_ID" --agent "$AGENT_NAME" \
             --image "$AGENT_IMAGE" --allowlist "$RUNNER_TEMP/allowlist.json" \
             --repo "$GITHUB_REPOSITORY" "${scope[@]}" --branch "$BRANCH" --task-file "$RUNNER_TEMP/task/task.md" \
             --model-key-file "$RUNNER_TEMP/model-key" --github-token-file "$RUNNER_TEMP/gh-token" \
-            --ledger "$RUNNER_TEMP/flag-ledger.jsonl" --memory 4g --cpus 2 --timeout 3000 \
+            --ledger "$RUNNER_TEMP/flag-ledger.jsonl" --artifacts-dir "$RUNNER_TEMP/task-records" \
+            --memory 4g --cpus 2 --timeout 3000 \
             -- sh -c "$script" agent "$GITHUB_REPOSITORY" "$BRANCH" "$AGENT_MODEL" "$MAX_TURNS" \
             "$(cat "$RUNNER_TEMP/task/mcp.json")" "$MODE" "$BOT_NAME" "$BOT_EMAIL"
           code=$?
           rm -f "$RUNNER_TEMP/model-key"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           [ "$code" -eq 0 ] || [ "$code" -eq 3 ]
+
+      # GA-20: the session goes to a file, not the job log, and is redacted before it's kept.
+      - name: Redact the session and gateway logs
+        if: always() && steps.sandbox.outputs.code != ''
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/task-records"
+          redact=$GITHUB_WORKSPACE/.github/agent-kit/scripts/redact_session_log.py
+          python3 "$redact" session.raw.log session.log
+          rm -f session.raw.log
+          for name in gateway.jsonl proxy.jsonl; do
+            python3 "$redact" "$name" "$name.redacted"
+            mv "$name.redacted" "$name"
+          done
 
       - name: Read the result from the ledger
         id: result
@@ -276,14 +291,24 @@ jobs:
           path: ${{ runner.temp }}/flag.md
           retention-days: 7
 
-      # Interim (GA-20 extends it, G1.6 replaces it): the ledger as a job artifact.
-      - name: Keep the task ledger
+      # GA-20, interim until G1.6's durable ledgers: the task's records as one artifact,
+      # kept 30 days. Files are named one by one, so the raw session log can't be included.
+      - name: Make sure no raw session log is left
+        if: always()
+        run: rm -f "$RUNNER_TEMP/task-records/session.raw.log"
+
+      - name: Keep the task records
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: task-ledger
-          path: ${{ runner.temp }}/flag-ledger.jsonl
-          if-no-files-found: ignore
+          name: task-records-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/flag-ledger.jsonl
+            ${{ runner.temp }}/task-records/session.log
+            ${{ runner.temp }}/task-records/gateway.jsonl
+            ${{ runner.temp }}/task-records/proxy.jsonl
+            ${{ runner.temp }}/task-records/summary.json
+          if-no-files-found: warn
           retention-days: 30
 
   flag-on-issue:
