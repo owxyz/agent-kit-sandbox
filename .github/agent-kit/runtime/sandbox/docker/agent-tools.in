@@ -1,0 +1,7 @@
+# Test tools baked into the agent image, at exact versions. The sandbox blocks
+# public registries, so these are what an agent can run. They match the fast
+# loop defaults (ruff, mypy, pytest) and requirements-test.txt.
+# After changing a pin, run: python3 sandbox/docker/lock_agent_tools.py
+mypy==1.19.1
+pytest==8.4.2
+ruff==0.17.4
