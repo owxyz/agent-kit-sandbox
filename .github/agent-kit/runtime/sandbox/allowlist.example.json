@@ -1,0 +1,6 @@
+{
+  "_comment": "Hosts the proxy lets an agent reach. Exact names only; IP literals never match. GitHub and the model API are not listed because the agent reaches them only through the gateway. Replace the placeholder with the internal registry mirror. private_ok permits a private address and is meant for that mirror alone. plain_http permits unencrypted forwarding; keep it false unless the mirror has no TLS.",
+  "allow": [
+    {"host": "REPLACE_WITH_INTERNAL_REGISTRY_MIRROR", "ports": [443], "private_ok": true, "plain_http": false}
+  ]
+}
