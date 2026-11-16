@@ -2,10 +2,12 @@
 """Runner-side helpers for the agent workflow (GA-17).
 
 Usage:
-  agent_task.py task --repo O/N --out FILE [--issue N] [--pr N --branch B] [--task-file F] [--note-file F]
+  agent_task.py task --repo O/N --out FILE --branch B [--issue N] [--pr N] [--task-file F] [--note-file F]
+  agent_task.py branch-name --agent NAME --run-id ID --title TEXT
   agent_task.py pr-branch --pr-json FILE --repo O/N --agent NAME --bot LOGIN[,LOGIN]
   agent_task.py mcp-config --config-dir DIR
   agent_task.py result --ledger FILE --task-id ID
+  agent_task.py check-commits --commits-json FILE --name NAME --email EMAIL
 
 `task` writes /task/task.md: a fixed preamble that says where the repository and
 the snapshot are, the rules for this mode, and then the maintainer's task text.
@@ -14,6 +16,9 @@ isn't: open, in this repository, under agent/<agent>/, opened by the agent's bot
 `mcp-config` prints the MCP config the CLI gets, from the base-commit copy; it
 refuses any server while the approved list is empty. `result` reads the
 runner's ledger record for the task and prints `pr=` and `flags=` lines.
+`branch-name` makes a new task's branch, agent/<agent>/<run-id>-<slug> (GA-18).
+`check-commits` refuses a PR any of whose commits isn't authored and committed
+by the bot's name and noreply address (GA-18).
 
 All of these run on the runner, outside the container, and never print tokens.
 """
@@ -71,6 +76,37 @@ def check_branch(branch, agent):
     return branch
 
 
+def branch_name(agent, run_id, title):
+    """agent/<agent>/<run-id>-<slug>: the slug is the title's first words, plain characters only."""
+    if not AGENT.match(agent or ""):
+        raise TaskError("bad agent name")
+    if not re.match(r"^[0-9]{1,20}$", str(run_id)):
+        raise TaskError("run id must be a number")
+    words = re.findall(r"[a-z0-9]+", (title or "").lower())
+    slug = ""
+    for word in words:
+        if len(slug) + len(word) + 1 > 40:
+            break
+        slug = (slug + "-" + word) if slug else word
+    slug = slug or "task"
+    return check_branch("agent/{}/{}-{}".format(agent, run_id, slug[:40].strip("-")), agent)
+
+
+def check_commits(commits, name, email):
+    """Every commit on the PR is authored and committed by the bot (GA-18). Return the offending SHAs."""
+    if not isinstance(commits, list) or not commits:
+        raise TaskError("the PR has no commits")
+    bad = []
+    for commit in commits:
+        detail = (commit or {}).get("commit") or {}
+        for role in ("author", "committer"):
+            person = detail.get(role) or {}
+            if person.get("name") != name or str(person.get("email", "")).lower() != email.lower():
+                bad.append(str(commit.get("sha", ""))[:12])
+                break
+    return bad
+
+
 def compose(repo, issue=None, pr=None, branch=None, task="", note=""):
     if not REPO.match(repo or ""):
         raise TaskError("repo must be owner/name")
@@ -78,8 +114,8 @@ def compose(repo, issue=None, pr=None, branch=None, task="", note=""):
         raise TaskError("a task needs an issue, or a PR to re-dispatch on")
     if pr is None and not task:
         raise TaskError("a new task needs task text")
-    if pr is not None and not branch:
-        raise TaskError("a re-dispatch needs the PR's branch")
+    if not branch:
+        raise TaskError("a task needs its branch")
     lines = [
         "# Task for the coding agent",
         "",
@@ -98,16 +134,16 @@ def compose(repo, issue=None, pr=None, branch=None, task="", note=""):
         lines += [
             "## Mode: new task on issue #{}".format(issue),
             "",
-            "- Work on a new branch under `agent/claude-code/`, push it, and open one pull request",
-            "  into the default branch that says it fixes #{}.".format(issue),
-            "- Open only one pull request.",
+            "- Your branch `{}` is checked out. Commit on it, push it, and open one draft pull".format(branch),
+            "  request from it into the default branch that says it fixes #{}.".format(issue),
+            "- Don't create or push any other branch, and don't change the git author settings.",
         ]
     else:
         lines += [
             "## Mode: re-dispatch on your pull request #{}".format(pr),
             "",
             "- Your branch `{}` is checked out. Commit on it and push to it.".format(branch),
-            "- Don't open a new pull request and don't create another branch.",
+            "- Don't open a new pull request, create another branch, or change the git author settings.",
             "- The snapshot lists the PR's reviews and failed checks; address them.",
         ]
         if issue is not None:
@@ -185,6 +221,14 @@ def main(argv=None):
     branch.add_argument("--bot", required=True, help="Comma-separated bot logins")
     mcp = sub.add_parser("mcp-config")
     mcp.add_argument("--config-dir", required=True)
+    name = sub.add_parser("branch-name")
+    name.add_argument("--agent", required=True)
+    name.add_argument("--run-id", required=True)
+    name.add_argument("--title", default="")
+    commits = sub.add_parser("check-commits")
+    commits.add_argument("--commits-json", required=True)
+    commits.add_argument("--name", required=True)
+    commits.add_argument("--email", required=True)
     res = sub.add_parser("result")
     res.add_argument("--ledger", required=True)
     res.add_argument("--task-id", required=True)
@@ -195,7 +239,7 @@ def main(argv=None):
                 raise TaskError("bad agent name")
             pr = _number(args.pr, "pr")
             text = compose(args.repo, issue=_number(args.issue, "issue"), pr=pr,
-                           branch=check_branch(args.branch, args.agent) if pr is not None else None,
+                           branch=check_branch(args.branch, args.agent),
                            task=_read(args.task_file, "task"), note=_read(args.note_file, "note"))
             with open(args.out, "w", encoding="utf-8") as handle:
                 handle.write(text)
@@ -203,6 +247,14 @@ def main(argv=None):
             with open(args.pr_json, encoding="utf-8") as handle:
                 pr = json.load(handle)
             print(pr_branch(pr, args.repo, args.agent, args.bot.split(",")))
+        elif args.command == "branch-name":
+            print(branch_name(args.agent, args.run_id, args.title))
+        elif args.command == "check-commits":
+            with open(args.commits_json, encoding="utf-8") as handle:
+                bad = check_commits(json.load(handle), args.name, args.email)
+            if bad:
+                raise TaskError("commits not by {} <{}>: {}".format(args.name, args.email, ", ".join(bad)))
+            print("all commits by " + args.name)
         elif args.command == "mcp-config":
             print(json.dumps(mcp_config(args.config_dir), separators=(",", ":")))
         else:
