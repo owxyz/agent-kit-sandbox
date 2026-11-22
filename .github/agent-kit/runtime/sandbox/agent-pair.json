@@ -2,12 +2,12 @@
   "_comment": "The coding agent's CLI and model, released together (red-team #15). A model can refuse an older CLI, and a CLI can drop a model, so neither changes alone. 'verified' records the last real run of exactly this pair; changing 'cli' or 'model' without a new real run leaves it stale, and agent_pair.py and the eval gate then refuse the pair. Code owners review every change.",
   "schema_version": 1,
   "agent": "claude-code",
-  "cli": {"package": "@anthropic-ai/claude-code", "version": "2.1.322"},
+  "cli": {"package": "@anthropic-ai/claude-code", "version": "2.1.323"},
   "model": "claude-opus-5-5",
   "verified": {
-    "cli_version": "2.1.322",
+    "cli_version": "2.1.323",
     "model": "claude-opus-5-5",
-    "date": "2026-11-11",
-    "evidence": "P0.8 red-team: real Claude Code runs in the sandbox against owxyz/agent-kit-sandbox (redteam/P0.8-REPORT.md)"
+    "date": "2026-11-22",
+    "evidence": "Candidate run (RT_CANDIDATE_CLI=2.1.323): P0.8 red-team scenarios s1-s4 with real Claude Code 2.1.323 and claude-opus-5-5 in the sandbox against owxyz/agent-kit-sandbox, image ghcr.io/owxyz/redteam-claude@sha256:5f5a82db64b78b03d3f57193ca3e134da14541e355e0d7eb45c6425e9f23c83f (redteam/reruns/2026-11.md)"
   }
 }

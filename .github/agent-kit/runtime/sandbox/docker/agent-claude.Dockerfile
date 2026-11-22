@@ -12,7 +12,7 @@
 # check below makes that a build failure instead.
 ARG BASE_IMAGE=runtime-agent:dev
 FROM ${BASE_IMAGE}
-ARG CLAUDE_CODE_VERSION=2.1.322
+ARG CLAUDE_CODE_VERSION=2.1.323
 USER root
 RUN test -n "$CLAUDE_CODE_VERSION" \
  && npm install -g --ignore-scripts "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
