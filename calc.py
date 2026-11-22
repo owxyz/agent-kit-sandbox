@@ -9,3 +9,16 @@ def add(a, b):
 def abs_diff(a, b):
     """Return the absolute difference |a - b|, which is never negative."""
     return abs(a - b)
+
+
+# Returns an int: 1, -1, or 0.
+def sign(x):
+    """Return 1 if x is positive, -1 if x is negative, and 0 if x is zero.
+
+    Examples: sign(-3) == -1, sign(0.5) == 1
+    """
+    if x > 0:
+        return 1
+    if x < 0:
+        return -1
+    return 0
